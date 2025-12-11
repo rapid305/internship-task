@@ -2,6 +2,7 @@ from app.db.db_config import Base
 from sqlalchemy import Column, Integer, String, Numeric, DateTime, ForeignKey, UniqueConstraint
 from sqlalchemy.orm import relationship
 
+
 class User(Base):
     __tablename__ = "user"
     id = Column(Integer, primary_key=True)
@@ -22,4 +23,11 @@ class UserBalance(Base):
 
     owner = relationship("User", back_populates="user_balance")
 
-
+class Transaction(Base):
+    __tablename__ = "transaction"
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, nullable=False)
+    currency = Column(String, nullable=True)
+    amount = Column(Numeric, nullable=True)
+    status = Column(String, nullable=True)
+    created = Column(DateTime, nullable=True)

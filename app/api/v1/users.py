@@ -5,14 +5,14 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.db_config import get_async_session
-from app.exceptions.all_exceptions import (
+from app.exceptions.user_exceptions import (
     UserAlreadyExistsException,
     UserNotExistsException,
     UserAlreadyBlockedException,
     UserAlreadyActiveException,
-    BadRequestDataException
 )
-from app.models.user_model import User, UserBalance
+from app.exceptions.common_exceptions import BadRequestDataException
+from app.db.models import User , UserBalance
 from app.core.schemas import CurrencyEnum
 from app.schemas.user_schemas import RequestUserModel, ResponseUserModel, UserModel, RequestUserUpdateModel, UserStatusEnum
 

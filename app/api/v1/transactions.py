@@ -4,8 +4,7 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy import select, insert, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.db_config import get_async_session
-from app.models.user_model import User, UserBalance
-from app.models.transaction_model import Transaction
+from app.db.models import Transaction , User, UserBalance
 from app.schemas.transaction_schemas import TransactionModel, RequestTransactionModel, TransactionStatusEnum
 from app.core.schemas import CurrencyEnum
 
