@@ -9,13 +9,19 @@ from app.core.schemas import CurrencyEnum
 from app.db.db_config import get_async_session
 from app.db.models import User, UserBalance
 from app.exceptions.common_exceptions import BadRequestDataException
-from app.exceptions.user_exceptions import (UserAlreadyActiveException,
-                                            UserAlreadyBlockedException,
-                                            UserAlreadyExistsException,
-                                            UserNotExistsException)
-from app.schemas.user_schemas import (RequestUserModel, RequestUserUpdateModel,
-                                      ResponseUserModel, UserModel,
-                                      UserStatusEnum)
+from app.exceptions.user_exceptions import (
+    UserAlreadyActiveException,
+    UserAlreadyBlockedException,
+    UserAlreadyExistsException,
+    UserNotExistsException,
+)
+from app.schemas.user_schemas import (
+    RequestUserModel,
+    RequestUserUpdateModel,
+    ResponseUserModel,
+    UserModel,
+    UserStatusEnum,
+)
 
 router = APIRouter(prefix="/users", tags=["users"])
 

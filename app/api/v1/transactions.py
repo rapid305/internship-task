@@ -8,9 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.schemas import CurrencyEnum
 from app.db.db_config import get_async_session
 from app.db.models import Transaction, User, UserBalance
-from app.schemas.transaction_schemas import (RequestTransactionModel,
-                                             TransactionModel,
-                                             TransactionStatusEnum)
+from app.schemas.transaction_schemas import RequestTransactionModel, TransactionModel, TransactionStatusEnum
 
 router = APIRouter(prefix="/transactions", tags=["transactions"])
 
