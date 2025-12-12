@@ -1,9 +1,10 @@
-from datetime import datetime
 import typing
+from datetime import datetime
 from enum import StrEnum
-from pydantic import BaseModel
-from app.core.schemas import CurrencyEnum
 
+from pydantic import BaseModel
+
+from app.core.schemas import CurrencyEnum
 
 
 class TransactionStatusEnum(StrEnum):
@@ -14,6 +15,7 @@ class TransactionStatusEnum(StrEnum):
 class RequestTransactionModel(BaseModel):
     currency: CurrencyEnum
     amount: float
+
 
 class TransactionModel(BaseModel):
     id: typing.Optional[int]

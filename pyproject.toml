@@ -13,8 +13,8 @@ fastapi = "^0.115.6"
 sqlalchemy = "^2.0.37"
 aiosqlite = "^0.20.0"
 asyncpg = "^0.31.0"
-dotenv = "^0.9.9"
 dynaconf = "^3.2.12"
+pre-commit = "^4.5.0"
 
 
 [tool.poetry.group.dev.dependencies]
