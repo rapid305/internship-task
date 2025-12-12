@@ -1,6 +1,13 @@
 from fastapi import HTTPException
 
+
 class NegativeBalanceException(HTTPException): ...
+
+
 class TransactionNotExistsException(HTTPException): ...
+
+
 class TransactionDoesNotBelongToUserException(HTTPException): ...
+
+
 class TransactionAlreadyRollbackedException(HTTPException): ...
