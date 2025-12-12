@@ -208,3 +208,4 @@ __marimo__/
 .idea
 
 /.idea
+app/config/secrets.toml

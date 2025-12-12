@@ -1,0 +1,20 @@
+[general]
+frontend_base_url = "http://localhost:3000"
+help_center_url = "http://localhost:3000"
+set_password_path = "/lifecycle/set-password"
+
+[db]
+url = "postgresql+asyncpg://postgres:postgres@localhost:5432/task_db"
+pool_size = 20
+max_overflow = 10
+pool_timeout = 30
+
+[server]
+reload = false
+host = "0.0.0.0"
+port = 8000
+cors_origins = ["http://localhost:3000"]
+
+[logging]
+level = "INFO"
+format = "json"

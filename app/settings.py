@@ -1,8 +1,14 @@
 from dynaconf import Dynaconf
 
 settings = Dynaconf(
-    load_dotenv=True,
-    envvar_prefix=False,
+    settings_files=[
+        'app/config/default.toml',
+        'app/config/settings.toml',
+        'app/config/secrets.toml',
+        'app/config/testing.toml',
+    ],
+    environments=True,
+    load_dotenv=False,
+    uppercase_keys=True
 )
 
-DATABASE_URL = settings.DATABASE_URL
