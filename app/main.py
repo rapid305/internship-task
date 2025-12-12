@@ -1,11 +1,11 @@
+import logging
 from contextlib import asynccontextmanager
 
 import uvicorn
+from fastapi import Depends, FastAPI
 
-from fastapi import FastAPI, Depends
 from app.api.v1 import router
-from app.db.db_config import get_async_session, create_db_and_tables
-import logging
+from app.db.db_config import create_db_and_tables, get_async_session
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -17,6 +17,7 @@ async def lifespan(app: FastAPI):
     state = {"database_ready": True}
     logger.info("Database ready")
     yield state
+
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(router)

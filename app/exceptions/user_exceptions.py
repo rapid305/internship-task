@@ -1,8 +1,19 @@
 from fastapi import HTTPException
 
+
 class UserAlreadyExistsException(HTTPException): ...
+
+
 class UserNotExistsException(HTTPException): ...
+
+
 class UserAlreadyBlockedException(HTTPException): ...
+
+
 class UserAlreadyActiveException(HTTPException): ...
+
+
 class CreateTransactionForBlockedUserException(HTTPException): ...
+
+
 class UpdateTransactionForBlockedUserException(HTTPException): ...
