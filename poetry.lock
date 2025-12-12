@@ -338,9 +338,6 @@ graph = ["objgraph (>=1.7.2)"]
 profile = ["gprof2dot (>=2022.7.29)"]
 
 [[package]]
-name = "dotenv"
-version = "0.9.9"
-description = "Deprecated package"
 name = "distlib"
 version = "0.4.0"
 description = "Distribution utilities"
@@ -348,11 +345,9 @@ optional = false
 python-versions = "*"
 groups = ["main"]
 files = [
-    {file = "dotenv-0.9.9-py2.py3-none-any.whl", hash = "sha256:29cf74a087b31dafdb5a446b6d7e11cbce8ed2741540e2339c69fbef92c94ce9"},
+    {file = "distlib-0.4.0-py2.py3-none-any.whl", hash = "sha256:9659f7d87e46584a30b5780e43ac7a2143098441670ff0a49d5f9034c54a6c16"},
+    {file = "distlib-0.4.0.tar.gz", hash = "sha256:feec40075be03a04501a973d81f633735b4b69f98b05450592310c0f401a4e0d"},
 ]
-
-[package.dependencies]
-python-dotenv = "*"
 
 [[package]]
 name = "dynaconf"
@@ -1591,4 +1586,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <3.13"
-content-hash = "2d94b68705fb8dda4da7fdd77b81b8e47ddbedd5c3d7a2aeaf321f09db1f6c70"
+content-hash = "e09845e4dcada79ed4f47307c99b9d806dd756d7f66a715d579f7f49179d04c8"
