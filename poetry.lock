@@ -340,6 +340,28 @@ files = [
 python-dotenv = "*"
 
 [[package]]
+name = "dynaconf"
+version = "3.2.12"
+description = "The dynamic configurator for your Python Project"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "dynaconf-3.2.12-py2.py3-none-any.whl", hash = "sha256:eb2a11865917dff8810c6098cd736b8f4d2f4e39ad914500e2dfbe064b82c499"},
+    {file = "dynaconf-3.2.12.tar.gz", hash = "sha256:29cea583b007d890e6031fa89c0ac489b631c73dbee83bcd5e6f97602c26354e"},
+]
+
+[package.extras]
+all = ["configobj", "hvac", "redis", "ruamel.yaml"]
+configobj = ["configobj"]
+ini = ["configobj"]
+redis = ["redis"]
+test = ["configobj", "django", "flask (>=0.12)", "hvac (>=1.1.0)", "pytest", "pytest-cov", "pytest-mock", "pytest-xdist", "python-dotenv", "radon", "redis", "toml"]
+toml = ["toml"]
+vault = ["hvac"]
+yaml = ["ruamel.yaml"]
+
+[[package]]
 name = "execnet"
 version = "2.1.2"
 description = "execnet: rapid multi-Python deployment"
@@ -1407,4 +1429,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.11, <3.13"
-content-hash = "a9cf08fc39e19e204a75563312e1443c71b8465060a01f1bc4e66c97375eca7c"
+content-hash = "691d2bd1117ef8713c24d3bf1d9599fe49cfa0216fa530e1fec2a97ddc59d491"
