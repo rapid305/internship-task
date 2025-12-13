@@ -1,19 +1,33 @@
-from fastapi import HTTPException
+from fastapi import status
+
+from app.core.exceptions import AppHTTPException
 
 
-class UserAlreadyExistsException(HTTPException): ...
+class UserAlreadyExistsException(AppHTTPException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "User already exists"
 
 
-class UserNotExistsException(HTTPException): ...
+class UserNotExistsException(AppHTTPException):
+    status_code = status.HTTP_404_NOT_FOUND
+    default_detail = "User does not exist"
 
 
-class UserAlreadyBlockedException(HTTPException): ...
+class UserAlreadyBlockedException(AppHTTPException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "User is already blocked"
 
 
-class UserAlreadyActiveException(HTTPException): ...
+class UserAlreadyActiveException(AppHTTPException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "User is already active"
 
 
-class CreateTransactionForBlockedUserException(HTTPException): ...
+class CreateTransactionForBlockedUserException(AppHTTPException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "Cannot create transaction for blocked user"
 
 
-class UpdateTransactionForBlockedUserException(HTTPException): ...
+class UpdateTransactionForBlockedUserException(AppHTTPException):
+    status_code = status.HTTP_403_FORBIDDEN
+    default_detail = "Cannot update transaction for blocked user"
