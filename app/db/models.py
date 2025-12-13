@@ -1,36 +1,56 @@
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, Numeric, String, UniqueConstraint
-from sqlalchemy.orm import relationship
+from sqlalchemy import ForeignKey, String, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship, Mapped, mapped_column
 
-from app.db.db_config import Base
+from app.core.models import BaseModelMixin
 
 
-class User(Base):
+class User(BaseModelMixin):
     __tablename__ = "user"
-    id = Column(Integer, primary_key=True)
-    email = Column(String, nullable=True, unique=True)
-    status = Column(String, nullable=True)
-    created = Column(DateTime, nullable=True)
 
-    user_balance = relationship("UserBalance", back_populates="owner")
+    email: Mapped[str] = mapped_column(String, nullable=True, unique=True)
+    status: Mapped[str] = mapped_column(String, nullable=True)
+
+    user_balance: Mapped[list["UserBalance"]] = relationship(
+        "UserBalance",
+        back_populates="owner"
+    )
 
 
-class UserBalance(Base):
+class UserBalance(BaseModelMixin):
     __tablename__ = "user_balance"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
-    currency = Column(String, nullable=True)
-    amount = Column(Numeric, nullable=True)
-    created = Column(DateTime, nullable=True)
-    UniqueConstraint("user_id", "currency", name="user_balance_user_currency_unique")
 
-    owner = relationship("User", back_populates="user_balance")
+    user_uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user.uuid", ondelete="CASCADE"),
+        nullable=False
+    )
+    currency: Mapped[str] = mapped_column(String, nullable=True)
+    amount: Mapped[float] = mapped_column(
+        nullable=True,
+        default=0
+    )
+
+    table_args = (
+        UniqueConstraint("user_uuid", "currency", name="user_balance_user_currency_unique"),
+    )
+
+    owner: Mapped["User"] = relationship(
+        "User",
+        back_populates="user_balance"
+    )
 
 
-class Transaction(Base):
+class Transaction(BaseModelMixin):
     __tablename__ = "transaction"
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, nullable=False)
-    currency = Column(String, nullable=True)
-    amount = Column(Numeric, nullable=True)
-    status = Column(String, nullable=True)
-    created = Column(DateTime, nullable=True)
+
+    user_uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("user.uuid", ondelete="CASCADE"),
+        nullable=False
+    )
+    currency: Mapped[str] = mapped_column(String, nullable=True)
+    amount: Mapped[float] = mapped_column(
+        nullable=True
+    )
+    status: Mapped[str] = mapped_column(String, nullable=True)
