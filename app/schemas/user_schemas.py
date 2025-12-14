@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, model_validator
+from uuid import UUID
 
 from app.core.schemas import CurrencyEnum
 
@@ -26,7 +27,7 @@ class ResponseUserBalanceModel(BaseModel):
 
 
 class ResponseUserModel(BaseModel):
-    id: typing.Optional[int]
+    uuid: typing.Optional[UUID]
     email: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
@@ -34,15 +35,15 @@ class ResponseUserModel(BaseModel):
 
 
 class UserModel(BaseModel):
-    id: typing.Optional[int]
+    uuid: typing.Optional[UUID]
     email: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
 
 
 class UserBalanceModel(BaseModel):
-    id: typing.Optional[int]
-    user_id: typing.Optional[int] = None
+    uuid: typing.Optional[UUID]
+    user_uuid: typing.Optional[UUID] = None
     currency: typing.Optional[CurrencyEnum] = None
     amount: typing.Optional[float] = None
 
