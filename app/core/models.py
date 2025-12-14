@@ -14,3 +14,8 @@ class BaseModelMixin(Base):
         DateTime,
         server_default=func.now()
     )
+    updated: Mapped[datetime] = mapped_column(
+        DateTime,
+        server_default=func.now(),
+        onupdate=func.now()
+    )
