@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Optional, Sequence
 from uuid import UUID
+
 from app.db.models import User
 
 
@@ -12,21 +13,16 @@ class IUserRepository(ABC):
         user_uuid: Optional[UUID] = None,
         email: Optional[str] = None,
         status: str | None = None,
-    ) -> Sequence[User]:
-        ...
+    ) -> Sequence[User]: ...
 
     @abstractmethod
-    async def get_user(self, user_uuid: UUID) -> User | None:
-        ...
+    async def get_user(self, user_uuid: UUID) -> User | None: ...
 
     @abstractmethod
-    async def get_by_email(self, email: str) -> User | None:
-        ...
+    async def get_by_email(self, email: str) -> User | None: ...
 
     @abstractmethod
-    async def change_status(self, user_uuid: UUID, status: str) -> None:
-        ...
+    async def change_status(self, user_uuid: UUID, status: str) -> None: ...
 
     @abstractmethod
-    async def add_user(self, user: User) -> User:
-        ...
+    async def add_user(self, user: User) -> User: ...

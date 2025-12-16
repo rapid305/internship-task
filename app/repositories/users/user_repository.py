@@ -2,8 +2,8 @@ from typing import Sequence
 from uuid import UUID
 
 from app.db.models import User
-from app.repositories.users.users_dao import UsersDAO
 from app.repositories.users.user_repository_interface import IUserRepository
+from app.repositories.users.users_dao import UsersDAO
 
 
 class UserRepository(IUserRepository):
@@ -32,7 +32,4 @@ class UserRepository(IUserRepository):
         return await self.dao.create(user)
 
     async def change_status(self, user_uuid: UUID, status: str) -> None:
-        await self.dao.update_status(
-            user_uuid,
-            status
-        )
+        await self.dao.update_status(user_uuid, status)

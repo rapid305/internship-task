@@ -1,8 +1,9 @@
 from fastapi import Depends
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from app.db.db_config import get_async_session
-from app.repositories.users.users_dao import UsersDAO
 from app.repositories.users.user_repository import UserRepository
+from app.repositories.users.users_dao import UsersDAO
 from app.services.user_service import UserService
 
 

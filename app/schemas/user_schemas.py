@@ -1,9 +1,9 @@
 import typing
 from datetime import datetime
 from enum import StrEnum
+from uuid import UUID
 
 from pydantic import BaseModel, model_validator
-from uuid import UUID
 
 from app.core.schemas import CurrencyEnum
 
