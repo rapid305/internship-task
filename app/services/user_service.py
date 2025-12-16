@@ -1,8 +1,7 @@
-from datetime import datetime, timezone
-from typing import Sequence
 from uuid import UUID
 
 from app.core.schemas import CurrencyEnum
+from app.db.dao.users_dao import UsersDAO
 from app.db.models import User, UserBalance
 from app.exceptions.common_exceptions import BadRequestDataException
 from app.exceptions.user_exceptions import (
@@ -11,51 +10,48 @@ from app.exceptions.user_exceptions import (
     UserAlreadyExistsException,
     UserNotExistsException,
 )
-from app.repositories.users.user_repository import UserRepository
-from app.schemas.user_schemas import RequestUserModel, UserStatusEnum
+from app.schemas.user_schemas import RequestUserModel, ResponseUserModel, UserFilters, UserStatusEnum
 
 
 class UserService:
-    def __init__(self, user_repository: UserRepository):
-        self.user_repository = user_repository
+    def __init__(self, user_dao: UsersDAO):
+        self.user_dao = user_dao
 
     async def get_users(
         self,
-        user_uuid: UUID | None = None,
-        email: str | None = None,
-        status: str | None = None,
-    ) -> Sequence[User]:
-        return await self.user_repository.get_users(user_uuid=user_uuid, email=email, status=status)
+        filters: UserFilters,
+    ) -> list[ResponseUserModel]:
+        users = await self.user_dao.get_all(
+            filters=filters,
+        )
+        return [ResponseUserModel.model_validate(user) for user in users]
 
-    async def create_user(self, user: RequestUserModel) -> User:
-        normalized_email = user.email.strip().replace(" ", "")
+    async def create_user(self, user: RequestUserModel) -> ResponseUserModel:
+        normalized_email = user.email
         if not normalized_email:
             raise BadRequestDataException()
 
-        if await self.user_repository.get_by_email(normalized_email):
+        if await self.user_dao.get_by_email(normalized_email):
             raise UserAlreadyExistsException()
 
-        user = User(
+        user_orm = User(
             email=normalized_email,
             status=UserStatusEnum.ACTIVE,
-            created=datetime.now(timezone.utc),
-            updated=datetime.now(timezone.utc),
             user_balance=[UserBalance(currency=str(currency.value), amount=0) for currency in CurrencyEnum],
         )
-        return await self.user_repository.add_user(user)
+        created_user = await self.user_dao.create(user_orm)
+        return ResponseUserModel.model_validate(created_user)
 
-    async def change_status(self, user_uuid: UUID, new_status: UserStatusEnum) -> User:
-        user = await self.user_repository.get_user(user_uuid)
+    async def change_status(self, user_uuid: UUID, new_status: UserStatusEnum) -> RequestUserModel:
+        user = await self.user_dao.get_by_uuid(user_uuid)
         if not user:
             raise UserNotExistsException()
 
+        status_str = str(new_status.value)
         if user.status == new_status.value:
             if new_status == UserStatusEnum.ACTIVE:
                 raise UserAlreadyActiveException()
             raise UserAlreadyBlockedException()
 
-        await self.user_repository.change_status(user_uuid, str(new_status.value))
-
-        user.status = str(new_status.value)
-        user.updated = datetime.now(timezone.utc)
-        return user
+        changed_user = await self.user_dao.update_status(user_uuid, status_str)
+        return RequestUserModel.model_validate(changed_user)

@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.user_dependencies import get_user_service
-from app.schemas.user_schemas import RequestUserModel, RequestUserUpdateModel, ResponseUserModel, UserModel
+from app.schemas.user_schemas import RequestUserModel, RequestUserUpdateModel, ResponseUserModel, UserFilters, UserModel
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -17,7 +17,8 @@ async def get_users(
     status: typing.Optional[str] = None,
     service: UserService = Depends(get_user_service),
 ):
-    return await service.get_users(user_uuid=user_uuid, email=email, status=status)
+    filters = UserFilters(uuid=user_uuid, email=email, status=status)
+    return await service.get_users(filters=filters)
 
 
 @router.post("", response_model=UserModel)
