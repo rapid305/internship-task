@@ -31,7 +31,8 @@ class ResponseUserModel(BaseModel):
     email: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
-    balances: typing.Optional[typing.List[ResponseUserBalanceModel]] = None
+    updated: typing.Optional[datetime] = None
+    user_balance: typing.Optional[typing.List[ResponseUserBalanceModel]] = None
 
 
 class UserModel(BaseModel):
@@ -39,6 +40,7 @@ class UserModel(BaseModel):
     email: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
+    updated: typing.Optional[datetime] = None
 
 
 class UserBalanceModel(BaseModel):
