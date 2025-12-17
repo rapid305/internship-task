@@ -42,7 +42,7 @@ class UserService:
         created_user = await self.user_dao.create(user_orm)
         return ResponseUserModel.model_validate(created_user)
 
-    async def change_status(self, user_uuid: UUID, new_status: UserStatusEnum) -> RequestUserModel:
+    async def change_status(self, user_uuid: UUID, new_status: UserStatusEnum) -> ResponseUserModel:
         user = await self.user_dao.get_by_uuid(user_uuid)
         if not user:
             raise UserNotExistsException()
@@ -54,4 +54,4 @@ class UserService:
             raise UserAlreadyBlockedException()
 
         changed_user = await self.user_dao.update_status(user_uuid, status_str)
-        return RequestUserModel.model_validate(changed_user)
+        return ResponseUserModel.model_validate(changed_user)

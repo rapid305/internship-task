@@ -16,6 +16,8 @@ class UserStatusEnum(StrEnum):
 class RequestUserModel(BaseModel):
     email: str
 
+    model_config = ConfigDict(from_attributes=True)
+
     @field_validator("email", mode="before")
     @classmethod
     def normalize_email(cls, v: str) -> str:

@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.api.dependencies.user_dependencies import get_user_service
-from app.schemas.user_schemas import RequestUserModel, RequestUserUpdateModel, ResponseUserModel, UserFilters, UserModel
+from app.schemas.user_schemas import RequestUserModel, RequestUserUpdateModel, ResponseUserModel, UserFilters
 from app.services.user_service import UserService
 
 router = APIRouter(prefix="/users", tags=["users"])
@@ -21,7 +21,7 @@ async def get_users(
     return await service.get_users(filters=filters)
 
 
-@router.post("", response_model=UserModel)
+@router.post("", response_model=ResponseUserModel)
 async def post_user(
     user: RequestUserModel,
     service: UserService = Depends(get_user_service),
@@ -29,7 +29,7 @@ async def post_user(
     return await service.create_user(user)
 
 
-@router.patch("/{user_uuid}", response_model=UserModel)
+@router.patch("/{user_uuid}", response_model=ResponseUserModel)
 async def patch_user(
     user_uuid: UUID,
     user: RequestUserUpdateModel,

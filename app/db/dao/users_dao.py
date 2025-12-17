@@ -36,5 +36,9 @@ class UsersDAO(BaseDAO[User]):
         result = await self.session.execute(select(User).where(User.email == email))
         return result.scalar_one_or_none()
 
-    async def update_status(self, user_uuid: UUID, status: str) -> None:
+    async def update_status(self, user_uuid: UUID, status: str) -> User:
         await self.update(user_uuid, status=status)
+
+        stmt = select(User).where(User.uuid == user_uuid).options(selectinload(User.user_balance))
+        result = await self.session.execute(stmt)
+        return result.scalar_one()
