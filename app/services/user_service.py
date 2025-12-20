@@ -1,8 +1,8 @@
+from typing import Optional
 from uuid import UUID
 
 from app.core.schemas import CurrencyEnum
 from app.db.dao.users_dao import UsersDAO
-from app.db.models import User, UserBalance
 from app.exceptions.common_exceptions import BadRequestDataException
 from app.exceptions.user_exceptions import (
     UserAlreadyActiveException,
@@ -10,7 +10,15 @@ from app.exceptions.user_exceptions import (
     UserAlreadyExistsException,
     UserNotExistsException,
 )
-from app.schemas.user_schemas import RequestUserModel, ResponseUserModel, UserFilters, UserStatusEnum
+from app.schemas.user_schemas import (
+    CreateUserModel,
+    RequestUserModel,
+    ResponseUserBalanceModel,
+    ResponseUserModel,
+    UserFilters,
+    UserModel,
+    UserStatusEnum,
+)
 
 
 class UserService:
@@ -19,11 +27,9 @@ class UserService:
 
     async def get_users(
         self,
-        filters: UserFilters,
+        filters: Optional[UserFilters] = None,
     ) -> list[ResponseUserModel]:
-        users = await self.user_dao.get_all(
-            filters=filters,
-        )
+        users = await self.user_dao.get_all_with_balances(filters=filters)
         return [ResponseUserModel.model_validate(user) for user in users]
 
     async def create_user(self, user: RequestUserModel) -> ResponseUserModel:
@@ -34,24 +40,26 @@ class UserService:
         if await self.user_dao.get_by_email(normalized_email):
             raise UserAlreadyExistsException()
 
-        user_orm = User(
+        balances = [ResponseUserBalanceModel(currency=currency, amount=0) for currency in CurrencyEnum]
+
+        user_data = CreateUserModel(
             email=normalized_email,
             status=UserStatusEnum.ACTIVE,
-            user_balance=[UserBalance(currency=str(currency.value), amount=0) for currency in CurrencyEnum],
+            user_balance=balances,
         )
-        created_user = await self.user_dao.create(user_orm)
+        created_user = await self.user_dao.create_user_with_balance(user_data)
         return ResponseUserModel.model_validate(created_user)
 
-    async def change_status(self, user_uuid: UUID, new_status: UserStatusEnum) -> ResponseUserModel:
+    async def change_status(self, user_uuid: UUID, new_status: UserStatusEnum) -> UserModel:
         user = await self.user_dao.get_by_uuid(user_uuid)
         if not user:
             raise UserNotExistsException()
 
-        status_str = str(new_status.value)
-        if user.status == new_status.value:
+        status_str = new_status
+        if user.status == status_str:
             if new_status == UserStatusEnum.ACTIVE:
                 raise UserAlreadyActiveException()
             raise UserAlreadyBlockedException()
 
         changed_user = await self.user_dao.update_status(user_uuid, status_str)
-        return ResponseUserModel.model_validate(changed_user)
+        return UserModel.model_validate(changed_user)

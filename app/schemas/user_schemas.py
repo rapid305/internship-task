@@ -63,6 +63,8 @@ class UserModel(BaseModel):
     created: typing.Optional[datetime] = None
     updated: typing.Optional[datetime] = None
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserBalanceModel(BaseModel):
     uuid: typing.Optional[UUID]
