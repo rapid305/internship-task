@@ -12,31 +12,17 @@ from app.schemas.user_schemas import CreateUserModel, UserFilters
 class UsersDAO(BaseDAO[User]):
     model = User
 
-    def _apply_user_filters(
-        self,
-        stmt,
-        filters: Optional[UserFilters] = None,
-    ):
-        if filters.uuid is not None:
-            stmt = stmt.where(self.model.uuid == filters.uuid)
-
-        if filters.email is not None:
-            stmt = stmt.where(self.model.email == filters.email)
-
-        if filters.status is not None:
-            stmt = stmt.where(self.model.status == filters.status)
-
-        return stmt
-
     async def get_all(self, filters: Optional[UserFilters] = None) -> Sequence[User]:
         stmt = select(self.model)
-        stmt = self._apply_user_filters(stmt, filters)
+        if filters:
+            stmt = self._apply_filters(stmt, kwargs=filters.model_dump(exclude_none=True))
         result = await self.session.execute(stmt)
         return result.scalars().all()
 
     async def get_all_with_balances(self, filters: Optional[UserFilters] = None) -> Sequence[User]:
         stmt = select(self.model).options(selectinload(User.user_balance))
-        stmt = self._apply_user_filters(stmt, filters)
+        if filters:
+            stmt = self._apply_filters(stmt, kwargs=filters.model_dump(exclude_none=True))
         result = await self.session.execute(stmt)
         return result.scalars().all()
 

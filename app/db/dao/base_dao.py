@@ -19,34 +19,37 @@ class BaseDAO(Generic[ModelT]):
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_by_uuid(self, _uuid: Any) -> Optional[ModelT]:
+    async def get_by_uuid(self, _uuid: Any, raise_not_found: bool = False) -> Optional[ModelT]:
         """Fetch a model instance by its UUID."""
         db_obj = await self.session.get(self.model, _uuid)
-        if not db_obj:
+        if not db_obj and raise_not_found:
             if self.not_found_exc:
                 raise self.not_found_exc(resource_name=self.model.__name__, identifier=_uuid)
-            raise ValueError(f"{self.model.__name__} with id {_uuid} not found.")
+            raise ValueError(f"{self.model.__name__} with uuid {_uuid} not found.")
         return db_obj
 
-    async def get(
-        self,
-    ) -> list[ModelT]:
-        """Fetch a list of model instances"""
+    async def get(self, **kwargs) -> list[ModelT]:
+        """Fetch a list of model instances based on keyword arguments."""
         stmt = select(self.model)
+        stmt = self._apply_filters(stmt, **kwargs)
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def create(self, obj_in: PydanticBaseModel) -> ModelT:
+    async def create(self, obj_in: PydanticBaseModel, should_commit: bool = True) -> ModelT:
         """Create a new model instance."""
         data = obj_in.model_dump(exclude_unset=True)
         db_obj = self.model(**data)
 
+        # Call optional hook
+        await self.before_create(db_obj, obj_in)
+
         self.session.add(db_obj)
         await self.session.flush()
-        await self.session.refresh(db_obj)
+        if should_commit:
+            await self.session.commit()
         return db_obj
 
-    async def update(self, db_obj: ModelT, obj_in: PydanticBaseModel) -> ModelT:
+    async def update(self, db_obj: ModelT, obj_in: PydanticBaseModel, should_commit: bool = True) -> ModelT:
         """Update an existing model instance."""
         data = obj_in.model_dump(exclude_unset=True)
         for field, value in data.items():
@@ -54,11 +57,13 @@ class BaseDAO(Generic[ModelT]):
                 setattr(db_obj, field, value)
         await self.session.flush()
         await self.session.refresh(db_obj)
+        if should_commit:
+            await self.session.commit()
         return db_obj
 
-    async def update_by_uuid(self, obj_uuid: Any, **payload: Any) -> ModelT:
+    async def update_by_uuid(self, obj_uuid: Any, should_commit: bool = True, **payload: Any) -> ModelT:
         """Update a model instance by its UUID."""
-        obj = await self.get_by_uuid(obj_uuid)
+        obj = await self.get_by_uuid(obj_uuid, raise_not_found=True)
 
         for key, value in payload.items():
             if hasattr(obj, key):
@@ -71,17 +76,65 @@ class BaseDAO(Generic[ModelT]):
         try:
             await self.session.flush()
             await self.session.refresh(obj)
+            if should_commit:
+                await self.session.commit()
         except SQLAlchemyError:
             await self.session.rollback()
             raise
 
         return obj
 
-    async def delete(self, _uuid: Any) -> Optional[ModelT]:
+    async def delete(self, _uuid: Any, should_commit: bool = True) -> Optional[ModelT]:
         """Delete a model instance by its UUID."""
         db_obj = await self.session.get(self.model, _uuid)
         if not db_obj:
             return None
         await self.session.delete(db_obj)
         await self.session.flush()
+        if should_commit:
+            await self.session.commit()
         return db_obj
+
+    def _apply_filters(self, stmt, kwargs: dict[str, Any]):
+        """
+        Apply filters to the SQLAlchemy statement.
+
+        Based on provided keyword arguments and additional filter expressions.
+        Args:
+            stmt: The SQLAlchemy select statement to which filters will be applied.
+            filters: Optional list of additional filter expressions to apply.
+            kwargs: Dictionary of field names and values to filter by, where keys
+                    can include operators like 'eq', 'in', 'like', etc.
+        Returns:
+            The modified SQLAlchemy statement with applied filters.
+        """
+        for key, value in kwargs.items():
+            if "__" in key:
+                field_name, operator = key.split("__", 1)
+            else:
+                field_name, operator = key, "eq"
+
+            if not hasattr(self.model, field_name):
+                continue  # skip unknown fields
+
+            column = getattr(self.model, field_name)
+
+            if operator == "eq":
+                stmt = stmt.where(column == value)
+            elif operator == "in":
+                stmt = stmt.where(column.in_(value))
+            elif operator == "like":
+                stmt = stmt.where(column.like(value))
+            elif operator == "ilike":
+                stmt = stmt.where(column.ilike(value))
+            elif operator == "gt":
+                stmt = stmt.where(column > value)
+            elif operator == "gte":
+                stmt = stmt.where(column >= value)
+            elif operator == "lt":
+                stmt = stmt.where(column < value)
+            elif operator == "lte":
+                stmt = stmt.where(column <= value)
+            else:
+                raise ValueError(f"Unsupported filter operator: {operator}")
+        return stmt
