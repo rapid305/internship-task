@@ -13,11 +13,7 @@ class UsersDAO(BaseDAO[User]):
     model = User
 
     async def get_all(self, filters: Optional[UserFilters] = None) -> Sequence[User]:
-        stmt = select(self.model)
-        if filters:
-            stmt = self._apply_filters(stmt, kwargs=filters.model_dump(exclude_none=True))
-        result = await self.session.execute(stmt)
-        return result.scalars().all()
+        return await self.get(filters=filters)
 
     async def get_all_with_balances(self, filters: Optional[UserFilters] = None) -> Sequence[User]:
         stmt = select(self.model).options(selectinload(User.user_balance))
