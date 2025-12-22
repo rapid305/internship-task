@@ -40,9 +40,6 @@ class BaseDAO(Generic[ModelT]):
         data = obj_in.model_dump(exclude_unset=True)
         db_obj = self.model(**data)
 
-        # Call optional hook
-        await self.before_create(db_obj, obj_in)
-
         self.session.add(db_obj)
         await self.session.flush()
         if should_commit:
@@ -95,7 +92,7 @@ class BaseDAO(Generic[ModelT]):
             await self.session.commit()
         return db_obj
 
-    def _apply_filters(self, stmt, kwargs: dict[str, Any]):
+    def _apply_filters(self, stmt, **kwargs):
         """
         Apply filters to the SQLAlchemy statement.
 
