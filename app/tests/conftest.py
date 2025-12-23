@@ -1,13 +1,18 @@
 import asyncio
-import uuid
+from decimal import Decimal
+from typing import Any, AsyncGenerator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+from app.core.schemas import CurrencyEnum
 from app.db.dao.transactions_dao import TransactionsDAO
+from app.db.dao.users_dao import UsersDAO
 from app.db.db_config import Base
 from app.db.models import User
+from app.schemas.user_schemas import CreateUserModel, ResponseUserBalanceModel, UserStatusEnum
+from app.services.transaction_service import TransactionService
 from app.settings import settings
 
 settings.setenv("testing")
@@ -50,7 +55,7 @@ async def session_maker(engine):
 
 
 @pytest_asyncio.fixture(scope="function")
-async def db_session(session_maker, engine) -> AsyncSession:
+async def db_session(session_maker, engine) -> AsyncGenerator[AsyncSession | Any, Any]:
     async with session_maker() as session:
         try:
             yield session
@@ -62,17 +67,30 @@ async def db_session(session_maker, engine) -> AsyncSession:
 
 
 @pytest_asyncio.fixture
-async def test_user(db_session: AsyncSession) -> User:
-    user = User(
-        uuid=uuid.uuid4(),
+async def test_user(db_session: AsyncSession, users_dao: UsersDAO) -> User:
+    user = CreateUserModel(
         email="test@example.com",
-        status="ACTIVE",
+        status=UserStatusEnum.ACTIVE,
+        user_balance=[
+            ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("0.00")),
+            ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("0.00")),
+        ],
     )
-    db_session.add(user)
-    await db_session.flush()
+
+    user = await users_dao.create_user_with_balance(user)
     return user
 
 
 @pytest_asyncio.fixture
 async def transactions_dao(db_session: AsyncSession):
     return TransactionsDAO(db_session)
+
+
+@pytest_asyncio.fixture
+async def users_dao(db_session: AsyncSession):
+    return UsersDAO(db_session)
+
+
+@pytest_asyncio.fixture
+async def transaction_service(transactions_dao: TransactionsDAO, users_dao: UsersDAO):
+    return TransactionService(transaction_dao=transactions_dao, user_dao=users_dao)

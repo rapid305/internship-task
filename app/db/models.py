@@ -24,7 +24,7 @@ class UserBalance(BaseModelMixin, Base):
         UUID(as_uuid=True), ForeignKey("user.uuid", ondelete="CASCADE"), nullable=False
     )
     currency: Mapped[str] = mapped_column(String, nullable=True)
-    amount: Mapped[float] = mapped_column(nullable=True, default=0)
+    amount: Mapped[Decimal] = mapped_column(nullable=True, default=0)
 
     table_args = (UniqueConstraint("user_uuid", "currency", name="user_balance_user_currency_unique"),)
 
