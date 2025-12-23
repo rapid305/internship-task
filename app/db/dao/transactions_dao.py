@@ -1,26 +1,21 @@
-from typing import Any, Optional
+from typing import List, Optional
 from uuid import UUID
 
-from app.db.dao.base_dao import BaseDAO, ModelT
+from sqlalchemy import select
+
+from app.db.dao.base_dao import BaseDAO
 from app.db.models import Transaction
-from app.schemas.transaction_schemas import CreateTransactionModel
 
 
 class TransactionsDAO(BaseDAO[Transaction]):
     model = Transaction
 
-    async def get(self, user_uuid: UUID) -> list[Transaction]:
-        return await super().get(user_uuid=user_uuid)
+    async def get(self, user_uuid: Optional[UUID] = None, **kwargs) -> List[Transaction]:
+        if user_uuid is not None:
+            kwargs["user_uuid"] = user_uuid
+        return await super().get(**kwargs)
 
-    async def create(
-        self,
-        transaction: CreateTransactionModel,
-        should_commit: bool = True,
-    ) -> Transaction:
-        return await super().create(transaction, should_commit=should_commit)
-
-    async def update_by_uuid(self, obj_uuid: Any, should_commit: bool = True, **payload: Any) -> Transaction:
-        return await super().update_by_uuid(obj_uuid, should_commit=should_commit, **payload)
-
-    async def get_by_uuid(self, _uuid: Any, raise_not_found: bool = False) -> Optional[ModelT]:
-        return await super().get_by_uuid(_uuid, raise_not_found=raise_not_found)
+    async def get_all_ordered(self) -> list[Transaction]:
+        stmt = select(self.model).order_by(self.model.created.desc())
+        result = await self.session.execute(stmt)
+        return list(result.scalars().all())

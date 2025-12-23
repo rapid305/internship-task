@@ -29,8 +29,7 @@ class TransactionModel(BaseModel):
 
 
 class CreateTransactionModel(BaseModel):
-    user_uuid: typing.Optional[UUID] = None
-    currency: typing.Optional[CurrencyEnum] = None
-    amount: typing.Optional[Decimal] = None
-    status: typing.Optional[TransactionStatusEnum] = None
-    created: typing.Optional[datetime] = None
+    user_uuid: UUID
+    currency: CurrencyEnum
+    amount: Decimal
+    status: TransactionStatusEnum
