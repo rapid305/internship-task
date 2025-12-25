@@ -1,5 +1,6 @@
 import typing
 from datetime import datetime
+from decimal import Decimal
 from enum import StrEnum
 from uuid import UUID
 
@@ -32,7 +33,7 @@ class RequestUserUpdateModel(BaseModel):
 
 class ResponseUserBalanceModel(BaseModel):
     currency: typing.Optional[CurrencyEnum] = None
-    amount: typing.Optional[float] = None
+    amount: typing.Optional[Decimal] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -70,7 +71,7 @@ class UserBalanceModel(BaseModel):
     uuid: typing.Optional[UUID]
     user_uuid: typing.Optional[UUID] = None
     currency: typing.Optional[CurrencyEnum] = None
-    amount: typing.Optional[float] = None
+    amount: typing.Optional[Decimal] = None
 
     model_config = ConfigDict(from_attributes=True)
 

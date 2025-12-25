@@ -16,16 +16,17 @@ class TransactionStatusEnum(StrEnum):
 
 class RequestTransactionModel(BaseModel):
     currency: CurrencyEnum
-    amount: float
+    amount: Decimal
 
 
 class TransactionModel(BaseModel):
     uuid: typing.Optional[UUID]
     user_uuid: typing.Optional[UUID] = None
     currency: typing.Optional[CurrencyEnum] = None
-    amount: typing.Optional[float] = None
+    amount: typing.Optional[Decimal] = None
     status: typing.Optional[TransactionStatusEnum] = None
     created: typing.Optional[datetime] = None
+    updated: typing.Optional[datetime] = None
 
 
 class CreateTransactionModel(BaseModel):

@@ -1,7 +1,8 @@
+from decimal import Decimal
 from typing import Optional, Sequence
 from uuid import UUID
 
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload
 
 from app.db.dao.base_dao import BaseDAO
@@ -43,3 +44,20 @@ class UsersDAO(BaseDAO[User]):
         stmt = select(User).options(selectinload(User.user_balance)).where(User.uuid == user.uuid)
         result = await self.session.execute(stmt)
         return result.scalar_one()
+
+    async def get_by_user_and_currency(self, user_uuid: UUID, currency: str) -> Optional[UserBalance]:
+        stmt = select(UserBalance).where((UserBalance.user_uuid == user_uuid) & (UserBalance.currency == currency))
+        result = await self.session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    async def update_balance(self, user_uuid: UUID, currency: str, new_amount: Decimal, should_commit: bool = False):
+        balance = await self.get_by_user_and_currency(user_uuid, currency)
+
+        stmt = update(UserBalance).where(UserBalance.uuid == balance.uuid).values(amount=new_amount)
+
+        await self.session.execute(stmt)
+
+        if should_commit:
+            await self.session.commit()
+        else:
+            await self.session.flush()
