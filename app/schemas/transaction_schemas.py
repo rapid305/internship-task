@@ -34,3 +34,13 @@ class CreateTransactionModel(BaseModel):
     currency: CurrencyEnum
     amount: Decimal
     status: TransactionStatusEnum
+
+
+class TransactionAnalyticsSchema(BaseModel):
+    registered_users_count: int
+    registered_and_deposit_users_count: int
+    registered_and_not_rollbacked_deposit_users_count: int
+    not_rollbacked_deposit_amount: Decimal
+    not_rollbacked_withdraw_amount: Decimal
+    transactions_count: int
+    not_rollbacked_transactions_count: int

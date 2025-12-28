@@ -41,6 +41,8 @@ class UsersDAO(BaseDAO[User]):
         self.session.add(user)
         await self.session.flush()
 
+        await self.session.commit()
+
         stmt = select(User).options(selectinload(User.user_balance)).where(User.uuid == user.uuid)
         result = await self.session.execute(stmt)
         return result.scalar_one()

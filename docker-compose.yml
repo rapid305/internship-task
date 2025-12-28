@@ -1,34 +1,115 @@
+version: "3.9"
+
 services:
+  rabbitmq:
+    image: rabbitmq:4.2.2-management-alpine
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   db:
-    image: postgres:18.0-alpine
+    image: postgres:18.1-alpine
+    container_name: postgres
     environment:
       POSTGRES_DB: task_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
 
   api:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: fastapi_app
     environment:
       - PAYMENT_SERVICE_ENV=development
+    ports:
+      - "7999:7999"
     volumes:
       - .:/app
-    ports:
-        - "7999:7999"
     depends_on:
-        db:
-            condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 5 && 
+             uvicorn app.main:app --host 0.0.0.0 --port 7999"
+
+  taskiq-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskiq_worker
+    environment:
+      - PAYMENT_SERVICE_ENV=development
+      - WORKERS=2
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 15 && 
+             cd /app &&
+             python -m taskiq worker app.taskiq_broker:broker 
+             --workers ${WORKERS:-2}
+             --fs-discover
+             --tasks-pattern 'tasks/*.py'
+             --log-level info"
 
 volumes:
   postgres_data:
+  rabbitmq-data:
+  redis-data:
 
+networks:
+  default:
+    name: app-network
+    driver: bridge

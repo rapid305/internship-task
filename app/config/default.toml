@@ -1,10 +1,18 @@
+[default]
+DAYS = 6
+WEEKS = 52
+
+[default.analytics.pagination]
+limit = 500
+offset = 0
+
 [general]
 frontend_base_url = "http://localhost:3000"
 help_center_url = "http://localhost:3000"
 set_password_path = "/lifecycle/set-password"
 
 [db]
-url = "postgresql+asyncpg://postgres:postgres@localhost:5432/task_db"
+url = "postgresql+asyncpg://postgres:postgres@db:5432/task_db"
 pool_size = 20
 max_overflow = 10
 pool_timeout = 30
@@ -14,6 +22,13 @@ reload = false
 host = "0.0.0.0"
 port = 8000
 cors_origins = ["http://localhost:3000"]
+
+[default.taskiq]
+amqp_url = "amqp://guest:guest@rabbitmq:5672/"
+prefetch_count = 10
+
+[default.redis]
+url = "redis://redis:6379/0"
 
 [logging]
 level = "INFO"

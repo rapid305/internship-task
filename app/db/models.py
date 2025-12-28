@@ -15,6 +15,7 @@ class User(BaseModelMixin, Base):
     status: Mapped[str] = mapped_column(String, nullable=True)
 
     user_balance: Mapped[list["UserBalance"]] = relationship("UserBalance", back_populates="owner")
+    user_transactions: Mapped[list["Transaction"]] = relationship("Transaction", back_populates="transaction_owner")
 
 
 class UserBalance(BaseModelMixin, Base):
@@ -40,3 +41,4 @@ class Transaction(BaseModelMixin, Base):
     currency: Mapped[str] = mapped_column(String, nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(precision=18, scale=2), nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=True)
+    transaction_owner: Mapped["User"] = relationship("User", back_populates="user_transactions")
