@@ -10,7 +10,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.schemas import CurrencyEnum
 from app.db.models import User
-from app.schemas.transaction_schemas import TaskReturn
+from app.schemas.transaction_schemas import TransactionAnalyticsSchema
 from app.settings import settings
 
 
@@ -58,7 +58,7 @@ class MetricsCalculator:
         self.users = result.scalars().all()
         return self.users
 
-    async def calculate_metrics(self) -> TaskReturn:
+    async def calculate_metrics(self) -> TransactionAnalyticsSchema:
 
         registered_users_count = 0
         registered_and_deposit_users_count = 0
@@ -112,7 +112,7 @@ class MetricsCalculator:
 
             current_offset += self.limit
 
-        return TaskReturn(
+        return TransactionAnalyticsSchema(
             registered_users_count=registered_users_count,
             registered_and_deposit_users_count=registered_and_deposit_users_count,
             registered_and_not_rollbacked_deposit_users_count=registered_and_not_rollbacked_deposit_users_count,
@@ -123,6 +123,6 @@ class MetricsCalculator:
         )
 
 
-async def get_metrics(session: AsyncSession, dt_gt: date, dt_lt: date) -> TaskReturn:
+async def get_metrics(session: AsyncSession, dt_gt: date, dt_lt: date) -> TransactionAnalyticsSchema:
     calculator = MetricsCalculator(session=session, dt_gt=dt_gt, dt_lt=dt_lt)
     return await calculator.calculate_metrics()

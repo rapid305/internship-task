@@ -36,7 +36,7 @@ class CreateTransactionModel(BaseModel):
     status: TransactionStatusEnum
 
 
-class TaskReturn(BaseModel):
+class TransactionAnalyticsSchema(BaseModel):
     registered_users_count: int
     registered_and_deposit_users_count: int
     registered_and_not_rollbacked_deposit_users_count: int
