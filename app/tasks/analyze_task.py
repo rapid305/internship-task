@@ -2,12 +2,16 @@ from datetime import datetime, timedelta, timezone
 
 from app.db.db_config import async_session_maker
 from app.db.queries import get_metrics
+from app.schemas.transaction_schemas import TaskReturn
+from app.settings import settings
 from app.taskiq_broker import broker
 
+DAYS: int = settings.get("DAYS")
+WEEKS: int = settings.get("WEEKS")
 
-def has_non_zero_metrics(metrics: dict) -> bool:
-    """Not check if not null metrics."""
-    for value in metrics.values():
+
+def has_non_zero_metrics(metrics: TaskReturn) -> bool:
+    for value in metrics.model_dump().values():
         if isinstance(value, (int, float)) and value > 0:
             return True
     return False
@@ -19,10 +23,10 @@ async def get_transaction_analysis() -> list[dict]:
     results: list[dict] = []
 
     dt_lt = datetime.now(timezone.utc).date()
-    dt_gt = dt_lt - timedelta(days=6)
+    dt_gt = dt_lt - timedelta(days=DAYS)
 
     async with async_session_maker() as session:
-        for week_num in range(52):
+        for week_num in range(WEEKS):
             metrics = await get_metrics(session, dt_gt, dt_lt)
 
             if has_non_zero_metrics(metrics):
@@ -31,7 +35,7 @@ async def get_transaction_analysis() -> list[dict]:
                         "week_number": week_num + 1,
                         "start_date": dt_gt.isoformat(),
                         "end_date": dt_lt.isoformat(),
-                        **metrics,
+                        **metrics.model_dump(),
                     }
                 )
 

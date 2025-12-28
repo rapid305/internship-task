@@ -1,3 +1,11 @@
+[default]
+DAYS = 6
+WEEKS = 52
+
+[default.analytics.pagination]
+limit = 500
+offset = 0
+
 [general]
 frontend_base_url = "http://localhost:3000"
 help_center_url = "http://localhost:3000"
