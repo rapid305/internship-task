@@ -11,6 +11,7 @@ from app.db.dao.transactions_dao import TransactionsDAO
 from app.db.dao.users_dao import UsersDAO
 from app.db.db_config import Base
 from app.db.models import User
+from app.schemas.transaction_schemas import TransactionAnalyticsSchema
 from app.schemas.user_schemas import CreateUserModel, ResponseUserBalanceModel, UserStatusEnum
 from app.services.transaction_service import TransactionService
 from app.settings import settings
@@ -79,6 +80,68 @@ async def test_user(db_session: AsyncSession, users_dao: UsersDAO) -> User:
 
     user = await users_dao.create_user_with_balance(user)
     return user
+
+
+@pytest_asyncio.fixture
+async def batch_users(db_session: AsyncSession, users_dao: UsersDAO) -> list[User]:
+    """Create multiple test users at once"""
+    users_data = [
+        {
+            "email": "user1@example.com",
+            "status": UserStatusEnum.ACTIVE,
+            "balances": [
+                ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("100.00")),
+            ],
+        },
+        {
+            "email": "user2@example.com",
+            "status": UserStatusEnum.ACTIVE,
+            "balances": [
+                ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("200.00")),
+            ],
+        },
+        {
+            "email": "user3@example.com",
+            "status": UserStatusEnum.INACTIVE,
+            "balances": [
+                ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("50.00")),
+                ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("25.00")),
+            ],
+        },
+    ]
+
+    users = []
+    for user_data in users_data:
+        user = CreateUserModel(
+            email=user_data["email"],
+            status=user_data["status"],
+            user_balance=user_data["balances"],
+        )
+        created_user = await users_dao.create_user_with_balance(user)
+        users.append(created_user)
+
+    return users
+
+
+@pytest_asyncio.fixture
+def mock_transaction_analytics():
+    """Fixture for mock TransactionAnalyticsSchema"""
+
+    def _create(**kwargs):
+        defaults = {
+            "registered_users_count": kwargs.get("registered_users_count", 10),
+            "registered_and_deposit_users_count": kwargs.get("registered_and_deposit_users_count", 5),
+            "registered_and_not_rollbacked_deposit_users_count": kwargs.get(
+                "registered_and_not_rollbacked_deposit_users_count", 4
+            ),
+            "not_rollbacked_deposit_amount": kwargs.get("not_rollbacked_deposit_amount", Decimal("1000.0")),
+            "not_rollbacked_withdraw_amount": kwargs.get("not_rollbacked_withdraw_amount", Decimal("500.0")),
+            "transactions_count": kwargs.get("transactions_count", 20),
+            "not_rollbacked_transactions_count": kwargs.get("not_rollbacked_transactions_count", 18),
+        }
+        return TransactionAnalyticsSchema(**defaults)
+
+    return _create
 
 
 @pytest_asyncio.fixture
