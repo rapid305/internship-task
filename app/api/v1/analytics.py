@@ -34,5 +34,8 @@ async def get_transaction_analysis_result(task_id: str):
         result = await broker.result_backend.get_result(task_id)
     except TaskiqResultTimeoutError:
         return {"task_id": task_id, "status": "processing"}
+    except Exception as e:
+        logger.error(f"Error retrieving task result {task_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve task result: {str(e)}")
 
     return {"task_id": task_id, "status": "completed", "data": result}
