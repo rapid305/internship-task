@@ -24,7 +24,7 @@ class RequestUserModel(BaseModel):
     def normalize_email(cls, v: str) -> str:
         if not isinstance(v, str):
             raise ValueError("email must be a string")
-        return v.strip().replace(" ", "")
+        return v.strip().replace(" ", "").lower()
 
 
 class RequestUserUpdateModel(BaseModel):

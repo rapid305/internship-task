@@ -52,7 +52,7 @@ class UsersDAO(BaseDAO[User]):
         result = await self.session.execute(stmt)
         return result.scalar_one_or_none()
 
-    async def update_balance(self, user_uuid: UUID, currency: str, new_amount: Decimal, should_commit: bool = False):
+    async def update_balance(self, user_uuid: UUID, currency: str, new_amount: Decimal, should_commit: bool = True):
         balance = await self.get_by_user_and_currency(user_uuid, currency)
 
         stmt = update(UserBalance).where(UserBalance.uuid == balance.uuid).values(amount=new_amount)
@@ -63,3 +63,6 @@ class UsersDAO(BaseDAO[User]):
             await self.session.commit()
         else:
             await self.session.flush()
+
+        await self.session.refresh(balance)
+        return balance
