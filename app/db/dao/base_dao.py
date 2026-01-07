@@ -35,7 +35,7 @@ class BaseDAO(Generic[ModelT]):
         result = await self.session.execute(stmt)
         return list(result.scalars().all())
 
-    async def create(self, obj_in: PydanticBaseModel, should_commit: bool = True) -> ModelT:
+    async def create(self, obj_in: PydanticBaseModel, should_commit: bool = False) -> ModelT:
         """Create a new model instance."""
         data = obj_in.model_dump(exclude_unset=True)
         db_obj = self.model(**data)
@@ -46,7 +46,7 @@ class BaseDAO(Generic[ModelT]):
             await self.session.commit()
         return db_obj
 
-    async def update(self, db_obj: ModelT, obj_in: PydanticBaseModel, should_commit: bool = True) -> ModelT:
+    async def update(self, db_obj: ModelT, obj_in: PydanticBaseModel, should_commit: bool = False) -> ModelT:
         """Update an existing model instance."""
         data = obj_in.model_dump(exclude_unset=True)
         for field, value in data.items():
@@ -58,7 +58,7 @@ class BaseDAO(Generic[ModelT]):
             await self.session.commit()
         return db_obj
 
-    async def update_by_uuid(self, obj_uuid: Any, should_commit: bool = True, **payload: Any) -> ModelT:
+    async def update_by_uuid(self, obj_uuid: Any, should_commit: bool = False, **payload: Any) -> ModelT:
         """Update a model instance by its UUID."""
         obj = await self.get_by_uuid(obj_uuid, raise_not_found=True)
 
@@ -81,7 +81,7 @@ class BaseDAO(Generic[ModelT]):
 
         return obj
 
-    async def delete(self, _uuid: Any, should_commit: bool = True) -> Optional[ModelT]:
+    async def delete(self, _uuid: Any, should_commit: bool = False) -> Optional[ModelT]:
         """Delete a model instance by its UUID."""
         db_obj = await self.session.get(self.model, _uuid)
         if not db_obj:
