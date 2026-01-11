@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 
 
 class OutboxProcessor:
-    """Processor for handling outbox events"""
+    """Processor for handling outbox_tests events"""
 
     def __init__(
         self,
@@ -27,7 +27,7 @@ class OutboxProcessor:
         self.is_running = False
 
     async def start(self) -> None:
-        """Start processing outbox events"""
+        """Start processing outbox_tests events"""
         self.is_running = True
         logger.info("Starting OutboxProcessor")
 
@@ -41,12 +41,12 @@ class OutboxProcessor:
             logger.error(f"Error in OutboxProcessor: {e}", exc_info=True)
 
     async def stop(self) -> None:
-        """Stop processing outbox events"""
+        """Stop processing outbox_tests events"""
         self.is_running = False
         logger.info("OutboxProcessor stopped")
 
     async def _process_batch(self) -> None:
-        """Process a batch of outbox events"""
+        """Process a batch of outbox_tests events"""
         try:
             async with self.session_maker() as session:
                 outbox_service = OutboxService(session)
@@ -55,7 +55,7 @@ class OutboxProcessor:
                 if not events:
                     return
 
-                logger.info(f"Processing {len(events)} outbox events")
+                logger.info(f"Processing {len(events)} outbox_tests events")
 
                 for event in events:
                     await self._process_single_event(event, outbox_service)
@@ -65,7 +65,7 @@ class OutboxProcessor:
             logger.error(f"Batch processing error: {e}", exc_info=True)
 
     async def _process_single_event(self, event: OutboxEvent, outbox_service: OutboxService) -> None:
-        """Process a single outbox event"""
+        """Process a single outbox_tests event"""
         try:
             payload = json.loads(event.payload)
             handler = self._find_handler(event.event_type)

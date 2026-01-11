@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   rabbitmq:
@@ -19,6 +18,8 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+    networks:
+      - default
     restart: unless-stopped
 
   redis:
@@ -34,48 +35,107 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - default
     restart: unless-stopped
 
-  db:
+  users-db:
     image: postgres:18.1-alpine
-    container_name: postgres
+    container_name: users_database
     environment:
-      POSTGRES_DB: task_db
+      POSTGRES_DB: user_db
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - users_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d user_db" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    networks:
+      - default
     restart: unless-stopped
 
-  api:
+  user-service:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: fastapi_app
+      target: users
+    container_name: userservice_app
     environment:
-      - PAYMENT_SERVICE_ENV=development
+      - USER_SERVICE_ENV=development
     ports:
-      - "7999:7999"
+      - "8000:8000"
     volumes:
-      - .:/app
+      - ./app/users:/app/app/users
+      - ./app/core:/app/app/core
+      - ./app/outbox_tests:/app/app/outbox_tests
     depends_on:
       rabbitmq:
         condition: service_healthy
       redis:
         condition: service_healthy
-      db:
+      users-db:
         condition: service_healthy
+    networks:
+      - default
     restart: unless-stopped
     command: >
-      sh -c "sleep 5 && 
-             uvicorn app.main:app --host 0.0.0.0 --port 7999"
+      sh -c "sleep 15 && 
+             uvicorn app.users.main:app --host 0.0.0.0 --port 8000"
+
+  transaction-db:
+    image: postgres:18.1-alpine
+    container_name: transaction_database
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - transaction_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d transaction_db" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    networks:
+      - default
+    restart: unless-stopped
+
+  transaction-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: transactions
+    container_name: transactionservice_app
+    environment:
+      - TRANSACTION_SERVICE_ENV=development
+    ports:
+      - "8001:8001"
+    volumes:
+      - ./app/transactions:/app/app/transactions
+      - ./app/core:/app/app/core
+      - ./app/outbox_tests:/app/app/outbox_tests
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+    networks:
+      - default
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 15 && 
+             uvicorn app.transactions.main:app --host 0.0.0.0 --port 8001"
 
   taskiq-worker:
     build:
@@ -92,20 +152,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      db:
+      transaction-db:
         condition: service_healthy
+      users-db:
+        condition: service_healthy
+    networks:
+      - default
     restart: unless-stopped
     command: >
       sh -c "sleep 15 && 
              cd /app &&
-             python -m taskiq worker app.taskiq_broker:broker 
+             python -m taskiq worker app.transactions.taskiq_broker:broker 
              --workers ${WORKERS:-2}
              --fs-discover
              --tasks-pattern 'tasks/*.py'
              --log-level info"
 
 volumes:
-  postgres_data:
+  users_postgres_data:
+  transaction_postgres_data:
   rabbitmq-data:
   redis-data:
 

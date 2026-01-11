@@ -5,7 +5,7 @@ from uuid import UUID
 from sqlalchemy import JSON, Boolean, DateTime, Integer, String, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.db_config import Base
+from app.core.db_config import Base
 
 
 class OutboxEvent(Base):

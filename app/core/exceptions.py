@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 
 
 class AppHTTPException(HTTPException):
@@ -16,6 +16,11 @@ class AppHTTPException(HTTPException):
             status_code=self.status_code,
             detail=self.default_detail,
         )
+
+
+class BadRequestDataException(AppHTTPException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "Bad Request"
 
 
 class DaoNotFoundError(Exception):

@@ -1,0 +1,19 @@
+from decimal import Decimal
+
+from sqlalchemy import ForeignKey, Numeric, String
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import Mapped, mapped_column
+
+from app.core.db_config import Base
+from app.core.models import BaseModelMixin
+
+
+class Transaction(BaseModelMixin, Base):
+    __tablename__ = "transaction"
+
+    user_uuid: Mapped[UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("user.uuid", ondelete="CASCADE"), nullable=False
+    )
+    currency: Mapped[str] = mapped_column(String, nullable=True)
+    amount: Mapped[Decimal] = mapped_column(Numeric(precision=18, scale=2), nullable=True)
+    status: Mapped[str] = mapped_column(String, nullable=True)
