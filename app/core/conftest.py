@@ -9,18 +9,16 @@ import pytest_asyncio
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.api.dependencies.user_dependencies import get_user_service
+from app.core.db_config import Base
 from app.core.schemas import CurrencyEnum
-from app.db.dao.transactions_dao import TransactionsDAO
-from app.db.dao.users_dao import UsersDAO
-from app.db.db_config import Base
-from app.db.models import User
-from app.main import app
-from app.schemas.transaction_schemas import TransactionAnalyticsSchema
-from app.schemas.user_schemas import CreateUserModel, ResponseUserBalanceModel, UserStatusEnum
-from app.services.transaction_service import TransactionService
-from app.services.user_service import UserService
-from app.settings import settings
+from app.transactions.schemas import TransactionAnalyticsSchema
+from app.users.api.user_dependencies import get_user_service
+from app.users.dao.users_dao import UsersDAO
+from app.users.db.models import User
+from app.users.main import app
+from app.users.schemas import CreateUserModel, ResponseUserBalanceModel, UserStatusEnum
+from app.users.service.user_service import UserService
+from app.users.settings import settings
 
 settings.setenv("testing")
 
@@ -79,21 +77,6 @@ def test_uuid() -> UUID:
     return uuid4()
 
 
-@pytest_asyncio.fixture
-async def test_user(db_session: AsyncSession, users_dao: UsersDAO) -> User:
-    user = CreateUserModel(
-        email="test@example.com",
-        status=UserStatusEnum.ACTIVE,
-        user_balance=[
-            ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("0.00")),
-            ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("0.00")),
-        ],
-    )
-
-    user = await users_dao.create_user_with_balance(user)
-    return user
-
-
 @pytest.fixture
 def mock_user_factory():
     """Factory fixture for creating mock users."""
@@ -147,7 +130,13 @@ def mock_user_factory():
 @pytest.fixture
 def default_mock_user(mock_user_factory):
     """Default mock user for tests."""
-    return mock_user_factory()
+    return mock_user_factory(
+        email="test@example.com",
+        status=UserStatusEnum.ACTIVE,
+        with_balances=True,
+        balance_amount_usd=Decimal("0.00"),
+        balance_amount_eur=Decimal("0.00"),
+    )
 
 
 @pytest.fixture
@@ -162,47 +151,6 @@ def mock_user_with_balances(mock_user_factory):
 def blocked_mock_user(mock_user_factory):
     """Blocked mock user."""
     return mock_user_factory(status=UserStatusEnum.BLOCKED)
-
-
-@pytest_asyncio.fixture
-async def batch_users(db_session: AsyncSession, users_dao: UsersDAO) -> list[User]:
-    """Create multiple test users at once"""
-    users_data = [
-        {
-            "email": "user1@example.com",
-            "status": UserStatusEnum.ACTIVE,
-            "balances": [
-                ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("100.00")),
-            ],
-        },
-        {
-            "email": "user2@example.com",
-            "status": UserStatusEnum.ACTIVE,
-            "balances": [
-                ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("200.00")),
-            ],
-        },
-        {
-            "email": "user3@example.com",
-            "status": UserStatusEnum.INACTIVE,
-            "balances": [
-                ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("50.00")),
-                ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("25.00")),
-            ],
-        },
-    ]
-
-    users = []
-    for user_data in users_data:
-        user = CreateUserModel(
-            email=user_data["email"],
-            status=user_data["status"],
-            user_balance=user_data["balances"],
-        )
-        created_user = await users_dao.create_user_with_balance(user)
-        users.append(created_user)
-
-    return users
 
 
 @pytest_asyncio.fixture
@@ -224,31 +172,6 @@ def mock_transaction_analytics():
         return TransactionAnalyticsSchema(**defaults)
 
     return _create
-
-
-@pytest_asyncio.fixture
-async def transactions_dao(db_session: AsyncSession):
-    return TransactionsDAO(db_session)
-
-
-@pytest_asyncio.fixture
-async def users_dao(db_session: AsyncSession):
-    return UsersDAO(db_session)
-
-
-@pytest_asyncio.fixture
-async def transaction_service(transactions_dao: TransactionsDAO, users_dao: UsersDAO):
-    return TransactionService(transaction_dao=transactions_dao, user_dao=users_dao)
-
-
-@pytest.fixture
-def mock_user_dao():
-    return AsyncMock(spec=UsersDAO)
-
-
-@pytest.fixture
-def user_service(mock_user_dao):
-    return UserService(user_dao=mock_user_dao)
 
 
 @pytest.fixture
@@ -284,3 +207,24 @@ def sample_user_data(test_uuid):
         "updated": None,
         "user_balance": [],
     }
+
+
+@pytest_asyncio.fixture
+async def users_dao(db_session: AsyncSession):
+    """Fixture for UsersDAO"""
+    return UsersDAO(db_session)
+
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession, users_dao: UsersDAO) -> User:
+    user = CreateUserModel(
+        email="test@example.com",
+        status=UserStatusEnum.ACTIVE,
+        user_balance=[
+            ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("0.00")),
+            ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("0.00")),
+        ],
+    )
+
+    user = await users_dao.create_user_with_balance(user)
+    return user
