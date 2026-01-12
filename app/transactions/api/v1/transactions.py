@@ -19,7 +19,7 @@ async def get_transactions(
 
 
 @router.post(
-    "/{user_id}/transactions", response_model=typing.Optional[TransactionModel] | None, status_code=status.HTTP_200_OK
+    "/{user_uuid}/transactions", response_model=typing.Optional[TransactionModel] | None, status_code=status.HTTP_200_OK
 )
 async def post_transaction(
     user_uuid: UUID,
@@ -29,7 +29,7 @@ async def post_transaction(
     return await service.create_transaction(user_uuid=user_uuid, transaction_data=transaction_data)
 
 
-@router.patch("/{user_id}/transactions/{transaction_id}", response_model=typing.Optional[TransactionModel] | None)
+@router.patch("/{user_uuid}/transactions/{transaction_uuid}", response_model=typing.Optional[TransactionModel] | None)
 async def patch_rollback_transaction(
     user_uuid: UUID,
     transaction_uuid: UUID,

@@ -1,12 +1,15 @@
+import logging
 from decimal import Decimal
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestDataException
 from app.core.schemas import CurrencyEnum
 from app.outbox.outbox_service import OutboxService
 from app.transactions.dao.transactions_dao import TransactionsDAO
+from app.transactions.db.models import UserProjection
 from app.transactions.exceptions import (
     NegativeBalanceException,
     TransactionAlreadyRollbackedException,
@@ -24,6 +27,8 @@ from app.users.exceptions import (
     CreateTransactionForBlockedUserException,
     UpdateTransactionForBlockedUserException,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class TransactionService:
@@ -44,12 +49,12 @@ class TransactionService:
         self._validate_transaction_amount(transaction_data.amount)
 
         await self._get_active_user(user_uuid)
-        current_balance = await self._get_user_balance(user_uuid, transaction_data.currency)
 
-        new_balance = self._calculate_new_balance(current_balance, transaction_data.amount)
+        current_balance = await self.user_dao.get_by_user_and_currency(user_uuid, transaction_data.currency)
+        current_amount = current_balance.amount if current_balance else Decimal("0.00")
+
+        new_balance = current_amount + transaction_data.amount
         self._validate_balance_not_negative(new_balance)
-
-        await self.user_dao.update_balance(user_uuid, transaction_data.currency, new_balance)
 
         transaction = await self._create_transaction_record(user_uuid, transaction_data)
 
@@ -62,8 +67,19 @@ class TransactionService:
                 "user_id": str(user_uuid),
                 "currency": transaction_data.currency.value,
                 "amount": str(transaction_data.amount),
-                "previous_balance": str(current_balance),
+                "previous_balance": str(current_amount),
                 "new_balance": str(new_balance),
+            },
+        )
+
+        await self.outbox_service.add_event(
+            aggregate_id=str(user_uuid),
+            event_type="BALANCE_UPDATED",
+            payload={
+                "event_type": "BALANCE_UPDATED",
+                "user_id": str(user_uuid),
+                "currency": transaction_data.currency.value,
+                "amount": str(transaction_data.amount),
             },
         )
 
@@ -78,17 +94,28 @@ class TransactionService:
 
     async def update_transaction(self, user_uuid: UUID, transaction_uuid: UUID) -> TransactionModel:
         """Rollback a transaction for a user."""
-        user = await self.user_dao.get_by_uuid(user_uuid, raise_not_found=True)
+        stmt = select(UserProjection).where(UserProjection.uuid == user_uuid)
+        result = await self.session.execute(stmt)
+        user = result.scalar_one_or_none()
+
+        if not user:
+            raise CreateTransactionForBlockedUserException()
+
         transaction = await self._get_user_transaction(user_uuid, transaction_uuid)
 
         self._validate_user_can_update_transaction(user, transaction)
 
-        current_balance = await self._get_user_balance(user_uuid, transaction.currency)
-        new_balance = self._calculate_rollback_balance(current_balance, transaction.amount)
+        currency_enum = (
+            CurrencyEnum(transaction.currency) if isinstance(transaction.currency, str) else transaction.currency
+        )
+
+        current_balance = await self.user_dao.get_by_user_and_currency(user_uuid, currency_enum)
+        current_amount = current_balance.amount if current_balance else Decimal("0.00")
+
+        new_balance = self._calculate_rollback_balance(current_amount, transaction.amount)
 
         self._validate_balance_not_negative(new_balance)
 
-        await self._update_user_balance(user_uuid, transaction, new_balance)
         await self._mark_transaction_as_rollbacked(transaction_uuid)
 
         await self.outbox_service.add_event(
@@ -100,8 +127,19 @@ class TransactionService:
                 "user_id": str(user_uuid),
                 "currency": transaction.currency,
                 "original_amount": str(transaction.amount),
-                "balance_before_rollback": str(current_balance),
+                "balance_before_rollback": str(current_amount),
                 "balance_after_rollback": str(new_balance),
+            },
+        )
+
+        await self.outbox_service.add_event(
+            aggregate_id=str(user_uuid),
+            event_type="BALANCE_UPDATED",
+            payload={
+                "event_type": "BALANCE_UPDATED",
+                "user_id": str(user_uuid),
+                "currency": currency_enum.value,
+                "amount": str(-transaction.amount),
             },
         )
 
@@ -110,22 +148,18 @@ class TransactionService:
         return self._build_transaction_model(transaction)
 
     async def _get_active_user(self, user_uuid: UUID):
-        """Retrieve and validate user is active."""
-        user = await self.user_dao.get_by_uuid(user_uuid, raise_not_found=True)
+        """Retrieve and validate user is active from local projection."""
+        stmt = select(UserProjection).where(UserProjection.uuid == user_uuid)
+        result = await self.session.execute(stmt)
+        projection = result.scalar_one_or_none()
 
-        if user.status != "ACTIVE":
+        if not projection:
             raise CreateTransactionForBlockedUserException()
 
-        return user
+        if projection.user_status != "ACTIVE":
+            raise CreateTransactionForBlockedUserException()
 
-    async def _get_user_balance(self, user_uuid: UUID, currency: CurrencyEnum) -> Decimal:
-        """Get user's current balance for a specific currency."""
-        user_balance = await self.user_dao.get_by_user_and_currency(user_uuid, currency)
-        return user_balance.amount if user_balance else Decimal("0.00")
-
-    async def _update_user_balance(self, user_uuid: UUID, transaction, new_balance: Decimal) -> None:
-        """Update user's balance after rollback."""
-        await self.user_dao.update_balance(user_uuid, transaction.currency, new_balance)
+        return projection
 
     async def _mark_transaction_as_rollbacked(self, transaction_uuid: UUID) -> None:
         """Mark transaction as rollbacked in database."""
@@ -161,11 +195,6 @@ class TransactionService:
             raise BadRequestDataException()
 
     @staticmethod
-    def _calculate_new_balance(current_balance: Decimal, amount: Decimal) -> Decimal:
-        """Calculate new balance after transaction."""
-        return current_balance + amount
-
-    @staticmethod
     def _calculate_rollback_balance(current_balance: Decimal, transaction_amount: Decimal) -> Decimal:
         """Calculate new balance after rollback."""
         if transaction_amount < 0:
@@ -193,7 +222,7 @@ class TransactionService:
         if transaction.status == "ROLLBACKED":
             raise TransactionAlreadyRollbackedException()
 
-        if user.status == "BLOCKED":
+        if user.user_status == "BLOCKED":
             raise UpdateTransactionForBlockedUserException()
 
     @staticmethod

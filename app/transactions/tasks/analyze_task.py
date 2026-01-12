@@ -3,8 +3,8 @@ from datetime import datetime, timedelta, timezone
 from app.transactions.db.db_config import session_maker as async_session_maker
 from app.transactions.db.queries import get_metrics
 from app.transactions.schemas import TransactionAnalyticsSchema
+from app.transactions.settings import settings
 from app.transactions.taskiq_broker import broker
-from app.users.settings import settings
 
 DAYS: int = settings.get("DAYS")
 WEEKS: int = settings.get("WEEKS")

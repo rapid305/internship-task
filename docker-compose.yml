@@ -1,4 +1,3 @@
-
 services:
   rabbitmq:
     image: rabbitmq:4.2.2-management-alpine
@@ -39,6 +38,75 @@ services:
       - default
     restart: unless-stopped
 
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - default
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_RETENTION_BYTES: 104857600
+      KAFKA_JVM_PERFORMANCE_OPTS: "-Xmx512M -Xms512M"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks:
+      - default
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - default
+    restart: unless-stopped
+
   users-db:
     image: postgres:18.1-alpine
     container_name: users_database
@@ -59,34 +127,6 @@ services:
     networks:
       - default
     restart: unless-stopped
-
-  user-service:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      target: users
-    container_name: userservice_app
-    environment:
-      - USER_SERVICE_ENV=development
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./app/users:/app/app/users
-      - ./app/core:/app/app/core
-      - ./app/outbox_tests:/app/app/outbox_tests
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      users-db:
-        condition: service_healthy
-    networks:
-      - default
-    restart: unless-stopped
-    command: >
-      sh -c "sleep 15 && 
-             uvicorn app.users.main:app --host 0.0.0.0 --port 8000"
 
   transaction-db:
     image: postgres:18.1-alpine
@@ -109,6 +149,36 @@ services:
       - default
     restart: unless-stopped
 
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: users
+    container_name: userservice_app
+    environment:
+      - USER_SERVICE_ENV=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/users:/app/app/users
+      - ./app/core:/app/app/core
+      - ./app/outbox:/app/app/outbox
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      users-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - default
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 30 && 
+             uvicorn app.users.main:app --host 0.0.0.0 --port 8000"
+
   transaction-service:
     build:
       context: .
@@ -118,11 +188,11 @@ services:
     environment:
       - TRANSACTION_SERVICE_ENV=development
     ports:
-      - "8001:8001"
+      - "8001:8000"
     volumes:
       - ./app/transactions:/app/app/transactions
       - ./app/core:/app/app/core
-      - ./app/outbox_tests:/app/app/outbox_tests
+      - ./app/outbox:/app/app/outbox
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -130,12 +200,14 @@ services:
         condition: service_healthy
       transaction-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - default
     restart: unless-stopped
     command: >
-      sh -c "sleep 15 && 
-             uvicorn app.transactions.main:app --host 0.0.0.0 --port 8001"
+      sh -c "sleep 30 && 
+             uvicorn app.transactions.main:app --host 0.0.0.0 --port 8000"
 
   taskiq-worker:
     build:
@@ -156,11 +228,13 @@ services:
         condition: service_healthy
       users-db:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - default
     restart: unless-stopped
     command: >
-      sh -c "sleep 15 && 
+      sh -c "sleep 30 && 
              cd /app &&
              python -m taskiq worker app.transactions.taskiq_broker:broker 
              --workers ${WORKERS:-2}
@@ -173,6 +247,9 @@ volumes:
   transaction_postgres_data:
   rabbitmq-data:
   redis-data:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
 
 networks:
   default:
