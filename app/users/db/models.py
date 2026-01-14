@@ -12,6 +12,7 @@ class User(BaseModelMixin, Base):
     __tablename__ = "user"
 
     email: Mapped[str] = mapped_column(String, nullable=True, unique=True)
+    password: Mapped[str] = mapped_column(String, nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=True)
 
     user_balance: Mapped[list["UserBalance"]] = relationship("UserBalance", back_populates="owner")

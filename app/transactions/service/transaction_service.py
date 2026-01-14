@@ -2,14 +2,12 @@ import logging
 from decimal import Decimal
 from uuid import UUID
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.exceptions import BadRequestDataException
 from app.core.schemas import CurrencyEnum
 from app.outbox.outbox_service import OutboxService
 from app.transactions.dao.transactions_dao import TransactionsDAO
-from app.transactions.db.models import UserProjection
 from app.transactions.exceptions import (
     NegativeBalanceException,
     TransactionAlreadyRollbackedException,
@@ -47,8 +45,6 @@ class TransactionService:
     ) -> TransactionModel:
         """Creates a new transaction for a user."""
         self._validate_transaction_amount(transaction_data.amount)
-
-        await self._get_active_user(user_uuid)
 
         current_balance = await self.user_dao.get_by_user_and_currency(user_uuid, transaction_data.currency)
         current_amount = current_balance.amount if current_balance else Decimal("0.00")
@@ -94,14 +90,14 @@ class TransactionService:
 
     async def update_transaction(self, user_uuid: UUID, transaction_uuid: UUID) -> TransactionModel:
         """Rollback a transaction for a user."""
-        stmt = select(UserProjection).where(UserProjection.uuid == user_uuid)
+        transaction = await self._get_user_transaction(user_uuid, transaction_uuid)
+
+        stmt = await self.user_dao.get_by_uuid(user_uuid)
         result = await self.session.execute(stmt)
         user = result.scalar_one_or_none()
 
         if not user:
             raise CreateTransactionForBlockedUserException()
-
-        transaction = await self._get_user_transaction(user_uuid, transaction_uuid)
 
         self._validate_user_can_update_transaction(user, transaction)
 
@@ -146,20 +142,6 @@ class TransactionService:
         await self.session.commit()
 
         return self._build_transaction_model(transaction)
-
-    async def _get_active_user(self, user_uuid: UUID):
-        """Retrieve and validate user is active from local projection."""
-        stmt = select(UserProjection).where(UserProjection.uuid == user_uuid)
-        result = await self.session.execute(stmt)
-        projection = result.scalar_one_or_none()
-
-        if not projection:
-            raise CreateTransactionForBlockedUserException()
-
-        if projection.user_status != "ACTIVE":
-            raise CreateTransactionForBlockedUserException()
-
-        return projection
 
     async def _mark_transaction_as_rollbacked(self, transaction_uuid: UUID) -> None:
         """Mark transaction as rollbacked in database."""

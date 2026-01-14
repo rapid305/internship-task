@@ -4,10 +4,16 @@ from uuid import UUID
 from fastapi import APIRouter, Depends
 
 from app.users.api.user_dependencies import get_user_service
-from app.users.schemas import RequestUserModel, RequestUserUpdateModel, ResponseUserModel, UserFilters, UserModel
+from app.users.schemas.user_schemas import (
+    RequestUserModel,
+    RequestUserUpdateModel,
+    ResponseUserModel,
+    UserFilters,
+    UserModel,
+)
 from app.users.service.user_service import UserService
 
-router = APIRouter(prefix="/v1/users", tags=["users"])
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.get("", response_model=list[ResponseUserModel])

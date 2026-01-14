@@ -15,9 +15,3 @@ class Transaction(BaseModelMixin, Base):
     currency: Mapped[str] = mapped_column(String, nullable=True)
     amount: Mapped[Decimal] = mapped_column(Numeric(precision=18, scale=2), nullable=True)
     status: Mapped[str] = mapped_column(String, nullable=True)
-
-
-class UserProjection(BaseModelMixin, Base):
-    __tablename__ = "user_projection"
-
-    user_status: Mapped[str] = mapped_column(String, nullable=True)

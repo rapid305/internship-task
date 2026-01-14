@@ -3,7 +3,7 @@ from decimal import Decimal
 import pytest
 
 from app.core.schemas import CurrencyEnum
-from app.users.schemas import RequestUserModel, ResponseUserModel, UserFilters, UserStatusEnum
+from app.users.schemas.user_schemas import RequestUserModel, ResponseUserModel, UserFilters, UserStatusEnum
 
 
 class TestUserService:
@@ -32,7 +32,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_create_user_success(self, user_service, mock_user_dao, mock_user_factory):
         """Test creating a user successfully."""
-        user_request = RequestUserModel(email="newuser@example.com")
+        user_request = RequestUserModel(email="newuser@example.com", password="password123")
         normalized_email = "newuser@example.com"
 
         mock_user_dao.get_by_email.return_value = None
@@ -97,11 +97,9 @@ class TestUserService:
 
         mock_user_dao.get_by_email.return_value = None
 
-        # Используем фабрику
-        mock_created_user = mock_user_factory(email=expected_email)
-        mock_user_dao.create_user_with_balance.return_value = mock_created_user
+        mock_user_factory(email=expected_email)
 
-        result = await user_service.create_user(RequestUserModel(email=input_email))
+        result = await user_service.create_user(RequestUserModel(email=input_email, password="testpass123"))
 
         assert result.email == expected_email
         mock_user_dao.get_by_email.assert_called_once_with(expected_email)
@@ -121,7 +119,7 @@ class TestUserService:
     @pytest.mark.asyncio
     async def test_create_user_with_all_currencies(self, user_service, mock_user_dao, default_mock_user):
         """Test that user is created with balances for all currencies."""
-        user_request = RequestUserModel(email="test@example.com")
+        user_request = RequestUserModel(email="test@example.com", password="password123")
 
         mock_user_dao.get_by_email.return_value = None
         mock_user_dao.create_user_with_balance.return_value = default_mock_user

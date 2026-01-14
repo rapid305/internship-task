@@ -4,7 +4,7 @@ import pytest
 
 from app.core.schemas import CurrencyEnum
 from app.users.db.models import User
-from app.users.schemas import CreateUserModel, ResponseUserBalanceModel, UserFilters, UserStatusEnum
+from app.users.schemas.user_schemas import CreateUserModel, ResponseUserBalanceModel, UserFilters, UserStatusEnum
 
 
 class TestUsersDAO:

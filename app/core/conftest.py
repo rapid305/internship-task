@@ -16,7 +16,7 @@ from app.users.api.user_dependencies import get_user_service
 from app.users.dao.users_dao import UsersDAO
 from app.users.db.models import User
 from app.users.main import app
-from app.users.schemas import CreateUserModel, ResponseUserBalanceModel, UserStatusEnum
+from app.users.schemas.user_schemas import CreateUserModel, ResponseUserBalanceModel, UserStatusEnum
 from app.users.service.user_service import UserService
 from app.users.settings import settings
 
@@ -83,6 +83,7 @@ def mock_user_factory():
 
     def create_mock_user(
         email: str = "test@example.com",
+        password: str = "c4828408-eae7-4eb6-8351-a1226612a6f0",
         status: UserStatusEnum = UserStatusEnum.ACTIVE,
         user_uuid=None,
         with_balances: bool = False,
@@ -94,6 +95,7 @@ def mock_user_factory():
 
         Args:
             email: User email
+            password: User password
             status: User status
             user_uuid: UUID for user (generated if None)
             with_balances: Whether to add balance mocks
@@ -104,6 +106,7 @@ def mock_user_factory():
 
         mock_user = MagicMock()
         mock_user.uuid = user_uuid
+        mock_user.password = password
         mock_user.email = email
         mock_user.status = status
         mock_user.created = None
@@ -132,6 +135,7 @@ def default_mock_user(mock_user_factory):
     """Default mock user for tests."""
     return mock_user_factory(
         email="test@example.com",
+        password="c4828408-eae7-4eb6-8351-a1226612a6f0",
         status=UserStatusEnum.ACTIVE,
         with_balances=True,
         balance_amount_usd=Decimal("0.00"),
@@ -202,6 +206,7 @@ def sample_user_data(test_uuid):
     return {
         "uuid": str(test_uuid),
         "email": "test@example.com",
+        "password": "c4828408-eae7-4eb6-8351-a1226612a6f0",
         "status": "ACTIVE",
         "created": None,
         "updated": None,
@@ -219,6 +224,7 @@ async def users_dao(db_session: AsyncSession):
 async def test_user(db_session: AsyncSession, users_dao: UsersDAO) -> User:
     user = CreateUserModel(
         email="test@example.com",
+        password="c4828408-eae7-4eb6-8351-a1226612a6f0",
         status=UserStatusEnum.ACTIVE,
         user_balance=[
             ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("0.00")),

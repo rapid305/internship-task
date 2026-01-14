@@ -253,5 +253,4 @@ volumes:
 
 networks:
   default:
-    name: app-network
     driver: bridge

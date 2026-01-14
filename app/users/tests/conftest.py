@@ -22,7 +22,7 @@ from app.core.schemas import CurrencyEnum
 from app.outbox.outbox_service import OutboxService
 from app.users.dao.users_dao import UsersDAO
 from app.users.db.models import User
-from app.users.schemas import (
+from app.users.schemas.user_schemas import (
     CreateUserModel,
     ResponseUserBalanceModel,
     UserStatusEnum,
@@ -55,6 +55,7 @@ async def batch_users(db_session, users_dao: UsersDAO) -> list[User]:  # noqa: F
     users_data = [
         {
             "email": "user1@example.com",
+            "password": "c4828408-eae7-4eb6-8351-a1226612a6f0",
             "status": UserStatusEnum.ACTIVE,
             "balances": [
                 ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("100.00")),
@@ -62,6 +63,7 @@ async def batch_users(db_session, users_dao: UsersDAO) -> list[User]:  # noqa: F
         },
         {
             "email": "user2@example.com",
+            "password": "c4828408-eae7-4eb6-8351-a1226612a6f0",
             "status": UserStatusEnum.ACTIVE,
             "balances": [
                 ResponseUserBalanceModel(currency=CurrencyEnum.EUR, amount=Decimal("200.00")),
@@ -69,6 +71,7 @@ async def batch_users(db_session, users_dao: UsersDAO) -> list[User]:  # noqa: F
         },
         {
             "email": "user3@example.com",
+            "password": "c4828408-eae7-4eb6-8351-a1226612a6f0",
             "status": UserStatusEnum.INACTIVE,
             "balances": [
                 ResponseUserBalanceModel(currency=CurrencyEnum.USD, amount=Decimal("50.00")),
@@ -81,6 +84,7 @@ async def batch_users(db_session, users_dao: UsersDAO) -> list[User]:  # noqa: F
     for user_data in users_data:
         user = CreateUserModel(
             email=user_data["email"],
+            password=user_data["password"],
             status=user_data["status"],
             user_balance=user_data["balances"],
         )
@@ -110,6 +114,7 @@ def sample_user_data(test_uuid):  # noqa: F811
     return {
         "uuid": str(test_uuid),
         "email": "test@example.com",
+        "password": "password",
         "status": "ACTIVE",
         "created": None,
         "updated": None,

@@ -7,7 +7,7 @@ from sqlalchemy.orm import selectinload
 
 from app.core.dao import BaseDAO
 from app.users.db.models import User, UserBalance
-from app.users.schemas import CreateUserModel, UserFilters
+from app.users.schemas.user_schemas import CreateUserModel, UserFilters
 
 
 class UsersDAO(BaseDAO[User]):
@@ -33,6 +33,7 @@ class UsersDAO(BaseDAO[User]):
     async def create_user_with_balance(self, obj: CreateUserModel) -> User:
         user = User(
             email=obj.email,
+            password=obj.password,
             status=obj.status,
         )
 

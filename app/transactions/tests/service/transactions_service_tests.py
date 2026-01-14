@@ -5,7 +5,7 @@ import pytest
 from app.core.exceptions import BadRequestDataException
 from app.transactions.exceptions import NegativeBalanceException, TransactionAlreadyRollbackedException
 from app.transactions.schemas import RequestTransactionModel, TransactionStatusEnum
-from app.users.schemas import CurrencyEnum
+from app.users.schemas.user_schemas import CurrencyEnum
 
 
 class TestTransactionServiceCreateTransaction:

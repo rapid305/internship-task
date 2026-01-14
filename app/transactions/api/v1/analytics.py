@@ -2,6 +2,7 @@ import logging
 
 from fastapi import APIRouter
 from fastapi.exceptions import HTTPException
+from fastapi.security import OAuth2PasswordBearer
 from taskiq.exceptions import TaskiqResultTimeoutError
 
 from app.transactions.taskiq_broker import broker
@@ -11,8 +12,13 @@ logger = logging.getLogger(__name__)
 
 
 router = APIRouter(
-    prefix="/v1/analytics",
+    prefix="/analytics",
     tags=["Analytics"],
+)
+
+oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="token",
+    scheme_name="Token",
 )
 
 

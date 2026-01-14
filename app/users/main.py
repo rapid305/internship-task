@@ -9,7 +9,7 @@ from app.outbox.balance_event_handler import BalanceEventHandler
 from app.outbox.kafka_consumer import init_kafka_consumer
 from app.outbox.kafka_producer import kafka_producer
 from app.outbox.outbox_processor import OutboxProcessor
-from app.users.api.v1.users import router as users_router_v1
+from app.users.api.v1 import router as v1_router
 from app.users.db.db_config import create_db_and_tables, db
 from app.users.events.update_balance import handle_balance_updated
 from app.users.events.user_event_handler import UserEventHandler
@@ -56,7 +56,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
-app.include_router(users_router_v1)
+app.include_router(v1_router)
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=7999, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
