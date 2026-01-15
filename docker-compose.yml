@@ -215,7 +215,7 @@ services:
       dockerfile: Dockerfile
     container_name: taskiq_worker
     environment:
-      - PAYMENT_SERVICE_ENV=development
+      - TRANSACTION_SERVICE_ENV=development
       - WORKERS=2
     volumes:
       - .:/app
