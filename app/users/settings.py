@@ -1,10 +1,15 @@
+import os
+
 from dynaconf import Dynaconf
+
+current_env = os.getenv("USER_SERVICE_ENV", "default")
 
 settings = Dynaconf(
     env_var_prefix="USER_SERVICE",
     settings_files=[
         "app/users/config/default.toml",
         "app/users/config/settings.toml",
+        "app/users/config/production.toml",
         "app/users/config/testing.toml",
     ],
     env_switcher="USER_SERVICE_ENV",

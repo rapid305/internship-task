@@ -19,8 +19,8 @@ class MetricsCalculator:
         self.dt_gt = dt_gt
         self.dt_lt = dt_lt
         self.transactions: Sequence[Transaction] = []
-        self.offset = settings.analytics.pagination.offset
-        self.limit = settings.analytics.pagination.limit
+        self.offset = settings.get("ANALYTICS.PAGINATION.OFFSET")
+        self.limit = settings.get("ANALYTICS.PAGINATION.LIMIT")
 
         self.exchange_rates_to_usd: dict[CurrencyEnum, Decimal] = self.get_exchange_rates()
 

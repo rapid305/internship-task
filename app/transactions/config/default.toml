@@ -6,34 +6,34 @@ USERS_SERVICE_URL = "http://userservice_app:8000"
 ALGORITHM = "HS256"
 SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
 
-[default.analytics.pagination]
-limit = 500
-offset = 0
+# Analytics pagination
+ANALYTICS__PAGINATION__LIMIT = 500
+ANALYTICS__PAGINATION__OFFSET = 0
 
-[general]
-frontend_base_url = "http://localhost:3000"
-help_center_url = "http://localhost:3000"
-set_password_path = "/lifecycle/set-password"
+# General settings
+GENERAL__FRONTEND_BASE_URL = "http://localhost:3000"
+GENERAL__HELP_CENTER_URL = "http://localhost:3000"
+GENERAL__SET_PASSWORD_PATH = "/lifecycle/set-password"
 
-[db]
-url = "postgresql+asyncpg://postgres:postgres@transaction-db:5432/transaction_db"
-pool_size = 20
-max_overflow = 10
-pool_timeout = 30
+# Database settings
+DB__URL = "postgresql+asyncpg://postgres:postgres@transaction-db:5432/transaction_db"
+DB__POOL_SIZE = 20
+DB__MAX_OVERFLOW = 10
+DB__POOL_TIMEOUT = 30
 
-[server]
-reload = false
-host = "0.0.0.0"
-port = 8000
-cors_origins = ["http://localhost:3000"]
+# Server settings
+SERVER__RELOAD = false
+SERVER__HOST = "0.0.0.0"
+SERVER__PORT = 8000
+SERVER__CORS_ORIGINS = ["http://localhost:3000"]
 
-[default.taskiq]
-amqp_url = "amqp://guest:guest@rabbitmq:5672/"
-prefetch_count = 10
+# Taskiq settings
+TASKIQ__AMQP_URL = "amqp://guest:guest@rabbitmq:5672/"
+TASKIQ__PREFETCH_COUNT = 10
 
-[default.redis]
-url = "redis://redis:6379/0"
+# Redis settings
+REDIS__URL = "redis://redis:6379/0"
 
-[logging]
-level = "INFO"
-format = "json"
+# Logging settings
+LOGGING__LEVEL = "INFO"
+LOGGING__FORMAT = "json"
