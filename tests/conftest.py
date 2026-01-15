@@ -24,7 +24,7 @@ from app.settings import settings
 
 settings.setenv("testing")
 
-TEST_DB_URL = settings.db.url
+TEST_DB_URL = settings.get("DB.URL")
 
 
 @pytest.fixture(scope="session")

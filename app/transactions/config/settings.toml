@@ -3,11 +3,13 @@ dynaconf_merge = true
 [development]
 LOG_LEVEL = "DEBUG"
 
-DB__URL = "postgresql+asyncpg://postgres:postgres@users-db:5432/user_db"
+# Database settings for development
+DB__URL = "postgresql+asyncpg://postgres:postgres@transaction-db:5432/transaction_db"
 DB__POOL_SIZE = 20
 DB__MAX_OVERFLOW = 10
 DB__POOL_TIMEOUT = 30
 
+# Server settings for development
 SERVER__FRONTEND_BASE_URL = "http://localhost:3000"
 SERVER__HELP_CENTER_URL = "http://localhost:3000"
 SERVER__SET_PASSWORD_PATH = "/lifecycle/set-password"
