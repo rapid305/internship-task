@@ -209,3 +209,4 @@ __marimo__/
 
 /.idea
 app/config/secrets.toml
+.env
