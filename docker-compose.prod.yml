@@ -4,13 +4,13 @@ services:
     hostname: rabbitmq
     container_name: rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_AMQP_PORT}:${RABBITMQ_AMQP_PORT}"
+      - "${RABBITMQ_MANAGEMENT_PORT}:${RABBITMQ_MANAGEMENT_PORT}"
     environment:
-      RABBITMQ_DEFAULT_USER: "guest"
-      RABBITMQ_DEFAULT_PASS: "guest"
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
     volumes:
-      - rabbitmq_data_prod:/var/lib/rabbitmq
+      - rabbitmq_data_${ENVIRONMENT}:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -18,178 +18,151 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - backend
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 200M
-        reservations:
-          memory: 150M
-
-  redis:
-    image: redis:8.4.0-alpine
-    container_name: redis
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data_prod:/data
-    command: redis-server --appendonly yes
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - backend
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 64M
-        reservations:
-          memory: 32M
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    volumes:
-      - zookeeper_data_prod:/var/lib/zookeeper/data
-      - zookeeper_logs_prod:/var/lib/zookeeper/log
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
-      interval: 15s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
-    networks:
-      - backend
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-        reservations:
-          memory: 200M
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    container_name: kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "9092:9092"
-      - "29092:29092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_LOG_RETENTION_HOURS: 24
-      KAFKA_LOG_RETENTION_BYTES: 104857600
-      KAFKA_JVM_PERFORMANCE_OPTS: "-Xmx512M -Xms512M"
-    volumes:
-      - kafka_data_prod:/var/lib/kafka/data
-    healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "9092"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 45s
-    networks:
-      - backend
-    restart: unless-stopped
-    deploy:
-      resources:
-        limits:
-          memory: 1G
-        reservations:
-          memory: 600M
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     deploy:
       resources:
         limits:
           memory: 512M
         reservations:
-          memory: 350M
+          memory: 384M
+
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: redis
+    ports:
+      - "${REDIS_PORT}:${REDIS_PORT}"
+    volumes:
+      - redis_data_${ENVIRONMENT}:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - ${NETWORK_NAME}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
+
+  kafka:
+    image: confluentinc/cp-kafka:latest
+    container_name: kafka
+    ports:
+      - "${KAFKA_PORT}:${KAFKA_PORT}"
+      - "${KAFKA_CONTROLLER_PORT}:${KAFKA_CONTROLLER_PORT}"
+    environment:
+      KAFKA_KRAFT_MODE: "${KAFKA_KRAFT_MODE}"
+      KAFKA_PROCESS_ROLES: "${KAFKA_PROCESS_ROLES}"
+      KAFKA_NODE_ID: "${KAFKA_NODE_ID}"
+      KAFKA_CONTROLLER_QUORUM_VOTERS: "${KAFKA_CONTROLLER_QUORUM_VOTERS}"
+      KAFKA_LISTENERS: "${KAFKA_LISTENERS}"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "${KAFKA_LISTENER_SECURITY_PROTOCOL_MAP}"
+      KAFKA_INTER_BROKER_LISTENER_NAME: "${KAFKA_INTER_BROKER_LISTENER_NAME}"
+      KAFKA_CONTROLLER_LISTENER_NAMES: "${KAFKA_CONTROLLER_LISTENER_NAMES}"
+      KAFKA_ADVERTISED_LISTENERS: "${KAFKA_ADVERTISED_LISTENERS}"
+      KAFKA_LOG_DIRS: "${KAFKA_LOG_DIRS}"
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "${KAFKA_AUTO_CREATE_TOPICS_ENABLE}"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "${KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR}"
+      KAFKA_LOG_RETENTION_HOURS: "${KAFKA_LOG_RETENTION_HOURS}"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS}"
+      CLUSTER_ID: "${KAFKA_CLUSTER_ID}"
+    volumes:
+      - kafka_data_${ENVIRONMENT}:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "${KAFKA_PORT}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks:
+      - ${NETWORK_NAME}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-cluster-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "${KAFKA_UI_PORT}:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:${KAFKA_PORT}
+    networks:
+      - ${NETWORK_NAME}
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+        reservations:
+          memory: 384M
 
   users-db:
     image: postgres:18.1-alpine
     container_name: users_database
     environment:
-      POSTGRES_DB: user_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: "${POSTGRES_USERS_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     volumes:
-      - users_postgres_data_prod:/var/lib/postgresql/data
+      - users_postgres_data_${ENVIRONMENT}:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "${POSTGRES_USERS_PORT}:5432"
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d user_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_USERS_DB}" ]
       interval: 5s
       timeout: 10s
       retries: 10
       start_period: 10s
     networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1G
         reservations:
-          memory: 200M
+          memory: 768M
 
   transaction-db:
     image: postgres:18.1-alpine
     container_name: transaction_database
     environment:
-      POSTGRES_DB: transaction_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: "${POSTGRES_TRANSACTIONS_DB}"
+      POSTGRES_USER: "${POSTGRES_USER}"
+      POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     ports:
-      - "5432:5432"
+      - "${POSTGRES_TRANSACTIONS_PORT}:5432"
     volumes:
-      - transaction_postgres_data_prod:/var/lib/postgresql/data
+      - transaction_postgres_data_${ENVIRONMENT}:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U postgres -d transaction_db" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_TRANSACTIONS_DB}" ]
       interval: 5s
       timeout: 10s
       retries: 10
       start_period: 10s
     networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1G
         reservations:
-          memory: 200M
+          memory: 768M
 
   user-service:
     build:
@@ -198,9 +171,13 @@ services:
       target: users
     container_name: userservice_app
     environment:
-      - USER_SERVICE_ENV=production
+      - USER_SERVICE_ENV=${ENVIRONMENT}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:${KAFKA_PORT}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_AMQP_PORT}/
+      - REDIS_URL=redis://redis:${REDIS_PORT}/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@users-db:5432/${POSTGRES_USERS_DB}
     ports:
-      - "8000:8000"
+      - "${USER_SERVICE_PORT}:8000"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -211,16 +188,16 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     command: >
       sh -c "uvicorn app.users.main:app --host 0.0.0.0 --port 8000"
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1G
         reservations:
-          memory: 150M
+          memory: 512M
 
   transaction-service:
     build:
@@ -229,9 +206,13 @@ services:
       target: transactions
     container_name: transactionservice_app
     environment:
-      - TRANSACTION_SERVICE_ENV=production
+      - TRANSACTION_SERVICE_ENV=${ENVIRONMENT}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:${KAFKA_PORT}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_AMQP_PORT}/
+      - REDIS_URL=redis://redis:${REDIS_PORT}/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@transaction-db:5432/${POSTGRES_TRANSACTIONS_DB}
     ports:
-      - "8001:8001"
+      - "${TRANSACTION_SERVICE_PORT}:8001"
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -242,16 +223,16 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     command: >
       sh -c "uvicorn app.transactions.main:app --host 0.0.0.0 --port 8001"
     deploy:
       resources:
         limits:
-          memory: 256M
+          memory: 1G
         reservations:
-          memory: 150M
+          memory: 512M
 
   taskiq-worker:
     build:
@@ -259,8 +240,13 @@ services:
       dockerfile: Dockerfile
     container_name: taskiq_worker
     environment:
-      - TRANSACTION_SERVICE_ENV=production
-      - WORKERS=2
+      - TRANSACTION_SERVICE_ENV=${ENVIRONMENT}
+      - WORKERS=${WORKERS}
+      - KAFKA_BOOTSTRAP_SERVERS=kafka:${KAFKA_PORT}
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_AMQP_PORT}/
+      - REDIS_URL=redis://redis:${REDIS_PORT}/0
+      - USERS_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@users-db:5432/${POSTGRES_USERS_DB}
+      - TRANSACTIONS_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@transaction-db:5432/${POSTGRES_TRANSACTIONS_DB}
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -273,27 +259,27 @@ services:
       kafka:
         condition: service_healthy
     networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     command: >
       sh -c "python -m taskiq worker app.transactions.taskiq_broker:broker 
-             --workers ${WORKERS:-2}
+             --workers ${WORKERS}
              --fs-discover
              --tasks-pattern 'tasks/*.py'
              --log-level info"
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1G
         reservations:
-          memory: 300M
+          memory: 768M
 
   nginx:
     image: nginx:alpine
     container_name: nginx_prod
     ports:
-      - "80:80"
-      - "443:443"
+      - "${NGINX_HTTP_PORT}:80"
+      - "${NGINX_HTTPS_PORT}:443"
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./ssl:/etc/nginx/ssl
@@ -304,7 +290,7 @@ services:
       transaction-service:
         condition: service_started
     networks:
-      - backend
+      - ${NETWORK_NAME}
     restart: unless-stopped
     command: >
       sh -c "
@@ -319,22 +305,20 @@ services:
     deploy:
       resources:
         limits:
-          memory: 64M
+          memory: 256M
         reservations:
-          memory: 32M
+          memory: 128M
 
 networks:
-  backend:
+  ${NETWORK_NAME}:
     driver: bridge
     ipam:
       config:
-        - subnet: 172.20.0.0/16
+        - subnet: ${NETWORK_SUBNET}
 
 volumes:
-  users_postgres_data_prod:
-  transaction_postgres_data_prod:
-  rabbitmq_data_prod:
-  redis_data_prod:
-  zookeeper_data_prod:
-  zookeeper_logs_prod:
-  kafka_data_prod:
+  users_postgres_data_${ENVIRONMENT}:
+  transaction_postgres_data_${ENVIRONMENT}:
+  rabbitmq_data_${ENVIRONMENT}:
+  redis_data_${ENVIRONMENT}:
+  kafka_data_${ENVIRONMENT}:
