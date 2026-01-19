@@ -4,17 +4,17 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.exceptions import BadRequestDataException
 from app.core.schemas import CurrencyEnum
-from app.db.dao.users_dao import UsersDAO
-from app.exceptions.common_exceptions import BadRequestDataException
-from app.exceptions.user_exceptions import (
+from app.outbox.outbox_service import OutboxService
+from app.users.dao.users_dao import UsersDAO
+from app.users.exceptions import (
     UserAlreadyActiveException,
     UserAlreadyBlockedException,
     UserAlreadyExistsException,
     UserNotExistsException,
 )
-from app.outbox.outbox_service import OutboxService
-from app.schemas.user_schemas import (
+from app.users.schemas.user_schemas import (
     CreateUserModel,
     RequestUserModel,
     ResponseUserBalanceModel,
@@ -23,6 +23,7 @@ from app.schemas.user_schemas import (
     UserModel,
     UserStatusEnum,
 )
+from app.users.service.auth_service import hash_password
 
 
 class UserService:
@@ -40,16 +41,19 @@ class UserService:
 
     async def create_user(self, user: RequestUserModel) -> ResponseUserModel:
         normalized_email = user.email
-        if not normalized_email:
+        if not normalized_email and not user.password:
             raise BadRequestDataException()
 
         if await self.user_dao.get_by_email(normalized_email):
             raise UserAlreadyExistsException()
 
+        hashed_password = hash_password(user.password)
+
         balances = [ResponseUserBalanceModel(currency=currency, amount=Decimal(0)) for currency in CurrencyEnum]
 
         user_data = CreateUserModel(
             email=normalized_email,
+            password=hashed_password,
             status=UserStatusEnum.ACTIVE,
             user_balance=balances,
         )
