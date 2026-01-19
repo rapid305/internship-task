@@ -7,10 +7,10 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 15
 
 # Database settings
-DB__URL = "postgresql+asyncpg://postgres:postgres@users-db:5432/user_db"
-DB__POOL_SIZE = 20
-DB__MAX_OVERFLOW = 10
-DB__POOL_TIMEOUT = 30
+DB__URL = "postgresql+asyncpg://postgres:postgres@pgbouncer:6432/user_db"
+DB__POOL_SIZE = 0
+DB__MAX_OVERFLOW = 0
+DB__POOL_TIMEOUT = 0
 
 # Server settings
 SERVER__RELOAD = false
