@@ -5,7 +5,8 @@ import jwt
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.schemas import ServiceTokenRequest, oauth2_scheme
+from app.core.schemas import ServiceTokenRequest
+from app.core.security import oauth2_scheme
 from app.users.dao.users_dao import UsersDAO
 from app.users.db.db_config import get_async_session
 from app.users.schemas.auth_schemas import LoginRequest, Token
@@ -20,7 +21,7 @@ from app.users.service.auth_service import (
 router = APIRouter(prefix="/auth", tags=["auth"])
 
 
-@router.get("/me-token")
+@router.get("/read-access-token")
 async def read_token(token: str = Depends(oauth2_scheme)) -> Dict[str, Any]:
     return {"token": token}
 
