@@ -165,12 +165,22 @@ services:
           memory: 768M
 
   pgbouncer:
-    image: pgbouncer/pgbouncer:latest
+    image: edoburu/pgbouncer:latest
     container_name: pgbouncer
+    environment:
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DATABASES_HOST: "users-db,transaction-db"
+      DATABASES_PORT: "5432,5432"
+      DATABASES_DBNAME: "${POSTGRES_USERS_DB},${POSTGRES_TRANSACTIONS_DB}"
+      DATABASES_USER: "${POSTGRES_USER},${POSTGRES_USER}"
+      DATABASES_PASSWORD: "${POSTGRES_PASSWORD},${POSTGRES_PASSWORD}"
     ports:
       - "6432:6432"
     volumes:
       - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+      - ./pgbouncer/logs:/var/log/pgbouncer
     depends_on:
       users-db:
         condition: service_healthy
@@ -180,7 +190,7 @@ services:
       - backend
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "psql", "-U", "postgres", "-h", "localhost", "-p", "6432", "-d", "postgres", "-c", "SELECT 1"]
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "6432", "-U", "postgres"]
       interval: 10s
       timeout: 5s
       retries: 5
