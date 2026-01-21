@@ -13,24 +13,36 @@ class KafkaProducer:
     def __init__(self, bootstrap_servers: str):
         """
         Args:
-            bootstrap_servers: Address Kafka брокера
+            bootstrap_servers: Address Kafka broker (e.g., kafka:9092 for Docker)
         """
         self.bootstrap_servers = bootstrap_servers
         self.producer: Optional[AIOKafkaProducer] = None
 
     async def start(self) -> None:
         """Start the connection to Kafka"""
-        self.producer = AIOKafkaProducer(
-            bootstrap_servers=self.bootstrap_servers, value_serializer=lambda v: json.dumps(v).encode("utf-8")
-        )
-        await self.producer.start()
-        logger.info(f"Kafka Producer started: {self.bootstrap_servers}")
+        try:
+            self.producer = AIOKafkaProducer(
+                bootstrap_servers=self.bootstrap_servers, value_serializer=lambda v: json.dumps(v).encode("utf-8")
+            )
+            await self.producer.start()
+            logger.info(f"Kafka Producer started: {self.bootstrap_servers}")
+        except Exception as e:
+            logger.error(f"Failed to start Kafka producer: {e}")
+            self.producer = None
+            raise
 
     async def stop(self) -> None:
         """Stop the connection to Kafka"""
         if self.producer:
-            await self.producer.stop()
-            logger.info("Kafka Producer stopped")
+            try:
+                await self.producer.stop()
+                logger.info("Kafka Producer stopped")
+            except Exception as e:
+                logger.error(f"Failed to stop Kafka producer: {e}")
+            finally:
+                self.producer = None
+        else:
+            logger.info("Kafka Producer stop skipped: not started")
 
     async def send_event(self, topic: str, event: Dict[str, Any]) -> None:
         """

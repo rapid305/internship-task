@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.outbox.balance_event_handler import BalanceEventHandler
-from app.outbox.kafka_consumer import init_kafka_consumer
+from app.outbox.kafka_consumer import KafkaConsumer
 from app.outbox.kafka_producer import kafka_producer
 from app.outbox.outbox_processor import OutboxProcessor
 from app.transactions.api.v1 import router as transactions_router_v1
@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     outbox_processor_task = asyncio.create_task(processor.start())
     logger.info("Outbox transaction service processor started")
 
-    kafka_consumer = init_kafka_consumer(
+    kafka_consumer = KafkaConsumer.init_kafka_consumer(
         bootstrap_servers="kafka:9092",
         group_id="transaction-service",
         topics=["user.created", "user.blocked", "user.updated"],
@@ -48,8 +48,10 @@ async def lifespan(app: FastAPI):
     kafka_consumer.register_handler("user.created", handle_user_created)
     kafka_consumer.register_handler("user.blocked", handle_user_blocked)
 
-    kafka_consumer_task = asyncio.create_task(kafka_consumer.start())
+    await kafka_consumer.start()
     logger.info("Kafka Consumer started for User Service events")
+
+    kafka_consumer_task = asyncio.create_task(kafka_consumer.listen())
 
     await kafka_producer.start()
 
