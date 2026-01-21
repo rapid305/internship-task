@@ -5,15 +5,12 @@ import jwt
 from fastapi import Depends, HTTPException, status
 from starlette.requests import Request
 
-from app.transactions.settings import settings
-
-SECRET_KEY = settings.get("SECRET_KEY")
-ALGORITHM = settings.get("ALGORITHM")
+from app.users.service.auth_service import ALGORITHM, SECRET_KEY
 
 
 async def get_service_token_payload(request: Request) -> Dict[str, Any]:
     """
-    Check the service token and return the payload.
+    Validate incoming service token and return its payload.
 
     Validates:
      - Token format (Bearer)
@@ -32,7 +29,7 @@ async def get_service_token_payload(request: Request) -> Dict[str, Any]:
     if not auth_header.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Missing or invalid Authorization header",
+            detail="Missing or invalid Authorization header (expected 'Bearer <token>')",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -96,3 +93,27 @@ async def get_user_uuid_from_token(payload: Dict[str, Any] = Depends(get_service
             headers={"WWW-Authenticate": "Bearer"},
         )
     return UUID(user_uuid)
+
+
+async def get_user_token_from_request(request: Request) -> str:
+    """
+    Extract the user token (Bearer part) from Authorization header.
+
+    Used to get the original user token to exchange for a service token.
+
+    Returns:
+        user_token: The Bearer token string without "Bearer " prefix
+
+    Raises:
+        HTTPException: If Authorization header is missing or invalid
+    """
+    auth_header = request.headers.get("Authorization", "")
+
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing or invalid Authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return auth_header.replace("Bearer ", "", 1)

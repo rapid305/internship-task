@@ -6,7 +6,7 @@ import uvicorn
 from fastapi import FastAPI
 
 from app.outbox.balance_event_handler import BalanceEventHandler
-from app.outbox.kafka_consumer import init_kafka_consumer
+from app.outbox.kafka_consumer import KafkaConsumer
 from app.outbox.kafka_producer import kafka_producer
 from app.outbox.outbox_processor import OutboxProcessor
 from app.users.api.v1 import router as v1_router
@@ -30,7 +30,7 @@ async def lifespan(app: FastAPI):
     outbox_processor_task = asyncio.create_task(processor.start())
     logger.info("Outbox user service processor started")
 
-    kafka_consumer = init_kafka_consumer(
+    kafka_consumer = KafkaConsumer.init_kafka_consumer(
         bootstrap_servers="kafka:9092", group_id="user-service", topics=["balance.updated"]
     )
     kafka_consumer.register_handler("BALANCE_UPDATED", handle_balance_updated)
