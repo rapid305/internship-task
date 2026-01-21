@@ -10,7 +10,7 @@ services:
       RABBITMQ_DEFAULT_USER: "${RABBITMQ_USER}"
       RABBITMQ_DEFAULT_PASS: "${RABBITMQ_PASSWORD}"
     volumes:
-      - rabbitmq_data_${ENVIRONMENT}:/var/lib/rabbitmq
+      - rabbitmq_data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s
@@ -18,7 +18,7 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     deploy:
       resources:
@@ -33,14 +33,14 @@ services:
     ports:
       - "${REDIS_PORT}:${REDIS_PORT}"
     volumes:
-      - redis_data_${ENVIRONMENT}:/data
+      - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     deploy:
       resources:
@@ -72,15 +72,15 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: "${KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS}"
       CLUSTER_ID: "${KAFKA_CLUSTER_ID}"
     volumes:
-      - kafka_data_${ENVIRONMENT}:/var/lib/kafka/data
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "${KAFKA_PORT}"]
+      test: [ "CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092" ]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 45s
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     deploy:
       resources:
@@ -101,7 +101,7 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:${KAFKA_PORT}
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     deploy:
       resources:
@@ -118,7 +118,7 @@ services:
       POSTGRES_USER: "${POSTGRES_USER}"
       POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
     volumes:
-      - users_postgres_data_${ENVIRONMENT}:/var/lib/postgresql/data
+      - users_postgres_data:/var/lib/postgresql/data
     ports:
       - "${POSTGRES_USERS_PORT}:5432"
     healthcheck:
@@ -128,7 +128,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     deploy:
       resources:
@@ -147,7 +147,7 @@ services:
     ports:
       - "${POSTGRES_TRANSACTIONS_PORT}:5432"
     volumes:
-      - transaction_postgres_data_${ENVIRONMENT}:/var/lib/postgresql/data
+      - transaction_postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_TRANSACTIONS_DB}" ]
       interval: 5s
@@ -155,7 +155,7 @@ services:
       retries: 10
       start_period: 10s
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     deploy:
       resources:
@@ -163,6 +163,44 @@ services:
           memory: 1G
         reservations:
           memory: 768M
+
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: pgbouncer
+    environment:
+      DB_USER: "${POSTGRES_USER}"
+      DB_PASSWORD: "${POSTGRES_PASSWORD}"
+      DATABASES_HOST: "users-db,transaction-db"
+      DATABASES_PORT: "5432,5432"
+      DATABASES_DBNAME: "${POSTGRES_USERS_DB},${POSTGRES_TRANSACTIONS_DB}"
+      DATABASES_USER: "${POSTGRES_USER},${POSTGRES_USER}"
+      DATABASES_PASSWORD: "${POSTGRES_PASSWORD},${POSTGRES_PASSWORD}"
+    ports:
+      - "6432:6432"
+    volumes:
+      - ./pgbouncer/pgbouncer.ini:/etc/pgbouncer/pgbouncer.ini:ro
+      - ./pgbouncer/userlist.txt:/etc/pgbouncer/userlist.txt:ro
+      - ./pgbouncer/logs:/var/log/pgbouncer
+    depends_on:
+      users-db:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+    networks:
+      - backend
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "localhost", "-p", "6432", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+        reservations:
+          memory: 128M
 
   user-service:
     build:
@@ -175,7 +213,6 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:${KAFKA_PORT}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_AMQP_PORT}/
       - REDIS_URL=redis://redis:${REDIS_PORT}/0
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@users-db:5432/${POSTGRES_USERS_DB}
     ports:
       - "${USER_SERVICE_PORT}:8000"
     depends_on:
@@ -183,12 +220,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      users-db:
+      pgbouncer:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     command: >
       sh -c "uvicorn app.users.main:app --host 0.0.0.0 --port 8000"
@@ -210,7 +247,6 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:${KAFKA_PORT}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_AMQP_PORT}/
       - REDIS_URL=redis://redis:${REDIS_PORT}/0
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@transaction-db:5432/${POSTGRES_TRANSACTIONS_DB}
     ports:
       - "${TRANSACTION_SERVICE_PORT}:8001"
     depends_on:
@@ -218,12 +254,12 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      transaction-db:
+      pgbouncer:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     command: >
       sh -c "uvicorn app.transactions.main:app --host 0.0.0.0 --port 8001"
@@ -245,21 +281,17 @@ services:
       - KAFKA_BOOTSTRAP_SERVERS=kafka:${KAFKA_PORT}
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:${RABBITMQ_AMQP_PORT}/
       - REDIS_URL=redis://redis:${REDIS_PORT}/0
-      - USERS_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@users-db:5432/${POSTGRES_USERS_DB}
-      - TRANSACTIONS_DB_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@transaction-db:5432/${POSTGRES_TRANSACTIONS_DB}
     depends_on:
       rabbitmq:
         condition: service_healthy
       redis:
         condition: service_healthy
-      transaction-db:
-        condition: service_healthy
-      users-db:
+      pgbouncer:
         condition: service_healthy
       kafka:
         condition: service_healthy
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     command: >
       sh -c "python -m taskiq worker app.transactions.taskiq_broker:broker 
@@ -290,7 +322,7 @@ services:
       transaction-service:
         condition: service_started
     networks:
-      - ${NETWORK_NAME}
+      - backend
     restart: unless-stopped
     command: >
       sh -c "
@@ -309,16 +341,13 @@ services:
         reservations:
           memory: 128M
 
-networks:
-  ${NETWORK_NAME}:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: ${NETWORK_SUBNET}
-
 volumes:
-  users_postgres_data_${ENVIRONMENT}:
-  transaction_postgres_data_${ENVIRONMENT}:
-  rabbitmq_data_${ENVIRONMENT}:
-  redis_data_${ENVIRONMENT}:
-  kafka_data_${ENVIRONMENT}:
+  users_postgres_data:
+  transaction_postgres_data:
+  rabbitmq_data:
+  redis_data:
+  kafka_data:
+
+networks:
+    backend:
+        driver: bridge

@@ -2,27 +2,23 @@ from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
+from sqlalchemy.pool import NullPool
 
 Base = declarative_base()
 
 
 class Database:
-    def __init__(self, database_url: str, echo: bool = False, pool_size: int = 20, max_overflow: int = 10):
+    def __init__(self, database_url: str):
         """
         Initialize the Database with an asynchronous engine and session maker.
 
         Args:
             database_url: URL database
-            echo: Log SQL queries if True
-            pool_size: Quantity of connections in the pool
-            max_overflow: Maximum overflow size of the pool
+            poolclass: NullPool(we are using pgbouncer)
         """
         self.engine: AsyncEngine = create_async_engine(
             database_url,
-            echo=echo,
-            pool_size=pool_size,
-            max_overflow=max_overflow,
-            pool_pre_ping=True,
+            poolclass=NullPool,
         )
 
         self.session_maker = async_sessionmaker(
