@@ -8,11 +8,11 @@ logger = logging.getLogger(__name__)
 
 
 class UserEventHandler(EventHandler):
-    """Handler for user-related events - публикует в Kafka для других сервисов"""
+    """Handler for user-related events - public in Kafka for other services"""
 
     def supports(self, event_type: str) -> bool:
         """Support user-related events."""
-        return event_type in ["USER_CREATED", "USER_STATUS_CHANGED", "BALANCE_UPDATED"]
+        return event_type in ("USER_CREATED", "USER_STATUS_CHANGED", "BALANCE_UPDATED")
 
     async def handle(self, payload: Dict[str, Any]) -> None:
         """Handle user events and publish to Kafka"""
