@@ -16,6 +16,7 @@ class UserStatusEnum(StrEnum):
 
 class RequestUserModel(BaseModel):
     email: str
+    password: str
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -25,6 +26,18 @@ class RequestUserModel(BaseModel):
         if not isinstance(v, str):
             raise ValueError("email must be a string")
         return v.strip().replace(" ", "").lower()
+
+    @field_validator("password", mode="before")
+    @classmethod
+    def validate_password(cls, v: str) -> str:
+        if not isinstance(v, str):
+            raise ValueError("password must be a string")
+        password_bytes = v.encode("utf-8")
+        if len(password_bytes) > 72:
+            raise ValueError("password cannot be longer than 72 bytes when encoded in UTF-8")
+        if len(password_bytes) < 8:
+            raise ValueError("password must be at least 8 bytes when encoded in UTF-8")
+        return v
 
 
 class RequestUserUpdateModel(BaseModel):
@@ -41,6 +54,7 @@ class ResponseUserBalanceModel(BaseModel):
 class ResponseUserModel(BaseModel):
     uuid: typing.Optional[UUID]
     email: typing.Optional[str] = None
+    password: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
     updated: typing.Optional[datetime] = None
@@ -51,6 +65,7 @@ class ResponseUserModel(BaseModel):
 
 class CreateUserModel(BaseModel):
     email: typing.Optional[str] = None
+    password: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
     updated: typing.Optional[datetime] = None
@@ -59,6 +74,7 @@ class CreateUserModel(BaseModel):
 
 class UserModel(BaseModel):
     uuid: typing.Optional[UUID]
+    password: typing.Optional[str] = None
     email: typing.Optional[str] = None
     status: typing.Optional[UserStatusEnum] = None
     created: typing.Optional[datetime] = None
