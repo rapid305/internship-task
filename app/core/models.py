@@ -4,7 +4,7 @@ from uuid import UUID, uuid4
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db.db_config import Base
+from app.core.db_config import Base
 
 
 class BaseModelMixin(Base):

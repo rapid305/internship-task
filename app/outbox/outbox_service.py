@@ -13,7 +13,7 @@ logger = logging.getLogger(__name__)
 
 
 class OutboxService:
-    """Service for managing outbox events in the database."""
+    """Service for managing outbox_tests events in the database."""
 
     MAX_RETRIES = 3
     RETRY_DELAY_SECONDS = 60
@@ -27,7 +27,7 @@ class OutboxService:
         event_type: str,
         payload: Dict[str, Any],
     ) -> OutboxEvent:
-        """Add a new event to the outbox"""
+        """Add a new event to the outbox_tests"""
         try:
             event = OutboxEvent(
                 aggregate_id=aggregate_id,
@@ -35,10 +35,10 @@ class OutboxService:
                 payload=json.dumps(payload, default=str),
             )
             self.session.add(event)
-            logger.debug(f"Added outbox event: {event_type} for {aggregate_id}")
+            logger.debug(f"Added outbox_tests event: {event_type} for {aggregate_id}")
             return event
         except Exception as e:
-            logger.error(f"Failed to add outbox event: {e}")
+            logger.error(f"Failed to add outbox_tests event: {e}")
             raise
 
     async def get_unprocessed_events(self, limit: int = 50) -> Sequence[OutboxEvent] | list[Any]:
@@ -99,7 +99,7 @@ class OutboxService:
 
             result = await self.session.execute(query)
             deleted_count = result.rowcount
-            logger.info(f"Deleted {deleted_count} processed outbox events")
+            logger.info(f"Deleted {deleted_count} processed outbox_tests events")
             return deleted_count
         except Exception as e:
             logger.error(f"Failed to delete processed events: {e}")

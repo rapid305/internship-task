@@ -1,7 +1,0 @@
-dynaconf_merge = true
-
-[testing]
-log_level = "CRITICAL"
-
-[testing.db]
-url = "postgresql+asyncpg://postgres:postgres@localhost:5432/test_task_db"
