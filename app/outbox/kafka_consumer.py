@@ -69,17 +69,22 @@ class KafkaConsumer:
                 await self._handle_batch_poll()
             else:
                 async for message in self.consumer:
-                    await self._handle_message(message)
+                    await self._handle_single_message(message)
         except Exception as e:
             logger.error(f"Kafka Consumer error: {str(e)}")
             raise
         finally:
-            await self.consumer.stop()
+            self._running = False
+            if self.consumer:
+                await self.consumer.stop()
+                self.consumer = None
 
     async def stop(self) -> None:
         """Stop listening to Kafka topics"""
         self._running = False
-        self.consumer = None
+        if self.consumer:
+            await self.consumer.stop()
+            self.consumer = None
         logger.info("Kafka Consumer stopped")
 
     async def _handle_single_message(self, message) -> None:
@@ -123,6 +128,16 @@ class KafkaConsumer:
                 all_messages = []
                 for tp, msgs in msgset.items():
                     all_messages.extend(msgs)
+
+                if not all_messages:
+                    logger.debug(
+                        "Kafka batch poll returned 0 messages (topics=%s, timeout_ms=%s, batch_size=%s)",
+                        self.topics,
+                        self.poll_timeout,
+                        self.batch_size,
+                    )
+                    await asyncio.sleep(0.1)
+                    continue
 
                 logger.info(f"Processing batch of {len(all_messages)} messages")
 

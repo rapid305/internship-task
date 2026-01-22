@@ -11,7 +11,7 @@ class BalanceEventHandler(EventHandler):
     """Handle balance-related outbox events and publish them to Kafka."""
 
     def supports(self, event_type: str) -> bool:
-        """Поддерживаем события баланса."""
+        """Support balance update."""
         return event_type == "BALANCE_UPDATED"
 
     async def handle(self, payload: Dict[str, Any]) -> None:

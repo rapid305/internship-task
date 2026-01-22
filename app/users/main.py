@@ -35,7 +35,8 @@ async def lifespan(app: FastAPI):
     )
     kafka_consumer.register_handler("BALANCE_UPDATED", handle_balance_updated)
 
-    kafka_consumer_task = asyncio.create_task(kafka_consumer.start())
+    await kafka_consumer.start()
+    kafka_consumer_task = asyncio.create_task(kafka_consumer.listen())
     logger.info("Kafka Consumer started for Transaction Service events")
 
     state = {
@@ -50,6 +51,7 @@ async def lifespan(app: FastAPI):
 
     if kafka_consumer_task:
         await kafka_consumer.stop()
+        await kafka_consumer_task
 
     await kafka_producer.stop()
     logger.info("Kafka Producer stopped")
