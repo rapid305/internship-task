@@ -1,0 +1,39 @@
+[default]
+DAYS = 6
+WEEKS = 52
+USERS_SERVICE_PATH = "/v1/auth/service-token"
+USERS_SERVICE_URL = "http://userservice_app:8000"
+ALGORITHM = "HS256"
+SECRET_KEY = "09d25e094faa6ca2556c818166b7a9563b93f7099f6f0f4caa6cf63b88e8d3e7"
+
+# Analytics pagination
+ANALYTICS__PAGINATION__LIMIT = 500
+ANALYTICS__PAGINATION__OFFSET = 0
+
+# General settings
+GENERAL__FRONTEND_BASE_URL = "http://localhost:3000"
+GENERAL__HELP_CENTER_URL = "http://localhost:3000"
+GENERAL__SET_PASSWORD_PATH = "/lifecycle/set-password"
+
+# Database settings
+DB__URL = "postgresql+asyncpg://postgres:postgres@pgbouncer:6432/transaction_db"
+DB__POOL_SIZE = 0
+DB__MAX_OVERFLOW = 0
+DB__POOL_TIMEOUT = 0
+
+# Server settings
+SERVER__RELOAD = false
+SERVER__HOST = "0.0.0.0"
+SERVER__PORT = 8000
+SERVER__CORS_ORIGINS = ["http://localhost:3000"]
+
+# Taskiq settings
+TASKIQ__AMQP_URL = "amqp://guest:guest@rabbitmq:5672/"
+TASKIQ__PREFETCH_COUNT = 10
+
+# Redis settings
+REDIS__URL = "redis://redis:6379/0"
+
+# Logging settings
+LOGGING__LEVEL = "INFO"
+LOGGING__FORMAT = "json"
