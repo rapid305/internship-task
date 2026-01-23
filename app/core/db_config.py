@@ -27,19 +27,6 @@ class Database:
             expire_on_commit=False,
         )
 
-    async def create_db_and_tables(self, metadata=None):
-        """
-        Create database tables based on the provided metadata or Base metadata.
-
-        Args:
-            metadata: Optional metadata for creating tables
-        """
-        async with self.engine.begin() as conn:
-            if metadata:
-                await conn.run_sync(metadata.create_all)
-            else:
-                await conn.run_sync(Base.metadata.create_all)
-
     async def get_async_session(self) -> AsyncGenerator[AsyncSession, None]:
         """Generates an asynchronous database session."""
         async with self.session_maker() as session:

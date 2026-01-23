@@ -10,7 +10,7 @@ from app.outbox.kafka_consumer import KafkaConsumer
 from app.outbox.kafka_producer import kafka_producer
 from app.outbox.outbox_processor import OutboxProcessor
 from app.transactions.api.v1 import router as transactions_router_v1
-from app.transactions.db.db_config import create_db_and_tables, db
+from app.transactions.db.db_config import db
 from app.transactions.events.transaction_event_handler import TransactionEventHandler
 from app.transactions.events.user_event_handlers import (
     handle_user_blocked,
@@ -24,7 +24,6 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_db_and_tables()
 
     if not broker.is_worker_process:
         logger.info("Starting taskiq broker...")

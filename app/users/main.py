@@ -10,7 +10,7 @@ from app.outbox.kafka_consumer import KafkaConsumer
 from app.outbox.kafka_producer import kafka_producer
 from app.outbox.outbox_processor import OutboxProcessor
 from app.users.api.v1 import router as v1_router
-from app.users.db.db_config import create_db_and_tables, db
+from app.users.db.db_config import db
 from app.users.events.update_balance import handle_balance_updated
 from app.users.events.user_event_handler import UserEventHandler
 
@@ -20,7 +20,6 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await create_db_and_tables()
 
     await kafka_producer.start()
     logger.info("Kafka Producer started")

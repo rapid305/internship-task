@@ -4,8 +4,8 @@ from sqlalchemy import Numeric, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db_config import Base
 from app.core.models import BaseModelMixin
+from app.transactions.db.db_config import Base
 
 
 class Transaction(BaseModelMixin, Base):
