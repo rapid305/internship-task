@@ -22,6 +22,8 @@ taskiq-redis = "^1.2.1"
 aiokafka = "^0.13.0"
 passlib = {extras = ["bcrypt"], version = "^1.7.4"}
 pyjwt = "^2.10.1"
+alembic = "^1.18.1"
+psycopg2-binary = "^2.9.11"
 
 [tool.poetry.group.dev.dependencies]
 faker = "^19.10.0"

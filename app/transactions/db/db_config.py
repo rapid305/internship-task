@@ -1,7 +1,11 @@
 import logging
 
+from sqlalchemy.orm import declarative_base
+
 from app.core.db_config import Database
 from app.transactions.settings import settings
+
+Base = declarative_base()
 
 logger = logging.getLogger(__name__)
 
@@ -17,4 +21,3 @@ db = Database(
 session_maker = db.session_maker
 
 get_async_session = db.get_async_session
-create_db_and_tables = db.create_db_and_tables

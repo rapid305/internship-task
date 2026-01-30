@@ -4,10 +4,8 @@ from uuid import UUID, uuid4
 from sqlalchemy import DateTime, func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.core.db_config import Base
 
-
-class BaseModelMixin(Base):
+class BaseModelMixin:
     __abstract__ = True
 
     uuid: Mapped[UUID] = mapped_column(primary_key=True, default=uuid4)

@@ -4,8 +4,8 @@ from sqlalchemy import ForeignKey, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.core.db_config import Base
 from app.core.models import BaseModelMixin
+from app.users.db.db_config import Base
 
 
 class User(BaseModelMixin, Base):
