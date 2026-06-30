@@ -1,0 +1,256 @@
+services:
+  rabbitmq:
+    image: rabbitmq:4.2.2-management-alpine
+    hostname: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "guest"
+      RABBITMQ_DEFAULT_PASS: "guest"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - default
+    restart: unless-stopped
+
+  redis:
+    image: redis:8.4.0-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - default
+    restart: unless-stopped
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "2181:2181"
+    volumes:
+      - zookeeper-data:/var/lib/zookeeper/data
+      - zookeeper-logs:/var/lib/zookeeper/log
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - default
+    restart: unless-stopped
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    ports:
+      - "9092:9092"
+      - "29092:29092"
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_LOG_RETENTION_BYTES: 104857600
+      KAFKA_JVM_PERFORMANCE_OPTS: "-Xmx512M -Xms512M"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "nc", "-z", "localhost", "9092"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    networks:
+      - default
+    restart: unless-stopped
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    networks:
+      - default
+    restart: unless-stopped
+
+  users-db:
+    image: postgres:18.1-alpine
+    container_name: users_database
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - users_postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d user_db" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    networks:
+      - default
+    restart: unless-stopped
+
+  transaction-db:
+    image: postgres:18.1-alpine
+    container_name: transaction_database
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - transaction_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d transaction_db" ]
+      interval: 5s
+      timeout: 10s
+      retries: 10
+      start_period: 10s
+    networks:
+      - default
+    restart: unless-stopped
+
+  user-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: users
+    container_name: userservice_app
+    environment:
+      - USER_SERVICE_ENV=development
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./app/users:/app/app/users
+      - ./app/core:/app/app/core
+      - ./app/outbox:/app/app/outbox
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      users-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - default
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 30 && 
+             uvicorn app.users.main:app --host 0.0.0.0 --port 8000"
+
+  transaction-service:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: transactions
+    container_name: transactionservice_app
+    environment:
+      - TRANSACTION_SERVICE_ENV=development
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./app/transactions:/app/app/transactions
+      - ./app/core:/app/app/core
+      - ./app/outbox:/app/app/outbox
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - default
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 30 && 
+             uvicorn app.transactions.main:app --host 0.0.0.0 --port 8000"
+
+  taskiq-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: taskiq_worker
+    environment:
+      - PAYMENT_SERVICE_ENV=development
+      - WORKERS=2
+    volumes:
+      - .:/app
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+      users-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - default
+    restart: unless-stopped
+    command: >
+      sh -c "sleep 30 && 
+             cd /app &&
+             python -m taskiq worker app.transactions.taskiq_broker:broker 
+             --workers ${WORKERS:-2}
+             --fs-discover
+             --tasks-pattern 'tasks/*.py'
+             --log-level info"
+
+volumes:
+  users_postgres_data:
+  transaction_postgres_data:
+  rabbitmq-data:
+  redis-data:
+  zookeeper-data:
+  zookeeper-logs:
+  kafka-data:
+
+networks:
+  default:
+    driver: bridge
